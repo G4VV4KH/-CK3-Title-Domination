@@ -1,0 +1,45 @@
+﻿# Actor scope. Candidate work is bounded: capital's de-jure hierarchy plus one
+# adjacent/across-water duchy, kingdom and empire. No all-world title scan.
+# Exactly one candidate is evaluated against the actual respondent collection.
+td_ai_consider_campaign_effect = {
+	save_scope_as = td_dominant
+	capital_county = {
+		every_this_title_or_de_jure_above = {
+			limit = { td_ai_target_eligible_trigger = yes }
+			add_to_list = td_ai_candidates
+		}
+	}
+	random_character_to_title_neighboring_and_across_water_duchy = {
+		limit = { td_ai_target_eligible_trigger = yes NOT = { is_in_list = td_ai_candidates } }
+		add_to_list = td_ai_candidates
+	}
+	random_character_to_title_neighboring_and_across_water_kingdom = {
+		limit = { td_ai_target_eligible_trigger = yes NOT = { is_in_list = td_ai_candidates } }
+		add_to_list = td_ai_candidates
+	}
+	random_character_to_title_neighboring_and_across_water_empire = {
+		limit = { td_ai_target_eligible_trigger = yes NOT = { is_in_list = td_ai_candidates } }
+		add_to_list = td_ai_candidates
+	}
+	random_in_list = {
+		list = td_ai_candidates
+		save_scope_as = td_target
+		scope:td_dominant = {
+			if = {
+				limit = {
+					td_actor_eligible_trigger = yes
+					td_can_afford_trigger = yes
+					gold >= td_ai_gold_reserve_value
+					prestige >= td_ai_prestige_reserve_value
+				}
+				td_collect_targets_effect = yes
+				if = {
+					limit = { current_military_strength >= td_ai_required_strength_value }
+					# Begin owns the same cooldown for players and AI. Its synchronous
+					# victory/refund may already clear it before this call returns.
+					td_begin_effect = yes
+				}
+			}
+		}
+	}
+}

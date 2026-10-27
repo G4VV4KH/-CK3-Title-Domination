@@ -1,0 +1,74 @@
+﻿# External death/title transactions may invalidate an open current response.
+# These exceptional recovery hooks do not schedule normal response turns.
+on_death = { on_actions = { td_wake_queue_after_respondent_change } }
+on_title_lost = { on_actions = { td_wake_queue_after_respondent_change } }
+
+td_wake_queue_after_respondent_change = {
+    trigger = {
+        any_in_global_list = {
+            variable = td_active_campaigns
+            has_variable = td_active
+            has_variable = td_gathering
+            exists = var:td_current_respondent
+            trigger_if = { limit = { exists = var:td_current_respondent } var:td_current_respondent = root }
+        }
+    }
+    effect = {
+        save_scope_as = td_queue_changed_ruler
+        every_in_global_list = {
+            variable = td_active_campaigns
+            limit = {
+                has_variable = td_active
+                has_variable = td_gathering
+                exists = var:td_current_respondent
+                trigger_if = { limit = { exists = var:td_current_respondent } var:td_current_respondent = scope:td_queue_changed_ruler }
+            }
+            save_scope_as = td_target
+            td_queue_response_recovery_effect = yes
+        }
+    }
+}
+
+td_recover_response_queue = {
+    trigger = {
+        td_event_campaign_current_trigger = yes
+        scope:td_target = { has_variable = td_queue_recovery_pending has_variable = td_gathering }
+    }
+    effect = {
+        scope:td_target = { remove_variable = td_queue_recovery_pending }
+        if = {
+            limit = { scope:td_target = { NOT = { has_variable = td_response_queue_version } } }
+            scope:td_target = { remove_variable = td_queue_authority_changed }
+            td_migrate_response_queue_effect = yes
+        }
+        else_if = {
+            limit = { td_event_queue_current_trigger = yes }
+            if = {
+                limit = { scope:td_target = { has_variable = td_queue_authority_changed exists = var:td_religion_pending } }
+                scope:td_target = { remove_variable = td_queue_authority_changed }
+                td_redispatch_current_response_effect = yes
+            }
+            else = {
+                scope:td_target = { remove_variable = td_queue_authority_changed }
+                td_reconcile_response_queue_effect = yes
+            }
+        }
+        else = {
+            # A recovery scheduled for an earlier turn must not strand a newer
+            # dead recipient. Maintenance never chooses a response for anyone.
+            # Reissue authority-sensitive dialogs only through a fresh token.
+            if = {
+                limit = {
+                    scope:td_target = { has_variable = td_queue_authority_changed exists = var:td_religion_pending }
+                    trigger_if = {
+                        limit = { exists = scope:td_target.var:td_religion_pending }
+                        scope:td_target.var:td_religion_pending = { td_current_respondent_trigger = yes }
+                    }
+                }
+                td_queue_response_recovery_effect = yes
+            }
+            else = { scope:td_target = { remove_variable = td_queue_authority_changed } }
+            td_reconcile_response_queue_effect = yes
+        }
+    }
+}

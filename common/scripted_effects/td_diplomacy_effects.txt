@@ -1,0 +1,268 @@
+﻿# Inputs: td_target, td_diplomacy_actor, td_diplomacy_victim.
+# REFRESH_TRUCE=yes is used immediately before declaration. Alliances remain
+# additive so native fealty/title changes cannot erase the informed choice.
+td_capture_diplomacy_pair_effect = {
+    clear_saved_scope = td_diplomacy_pair
+    if = {
+        limit = {
+            exists = scope:td_diplomacy_actor
+            exists = scope:td_diplomacy_victim
+            scope:td_diplomacy_actor = { is_alive = yes NOT = { this = scope:td_diplomacy_victim } }
+            scope:td_diplomacy_victim = { is_alive = yes }
+        }
+        scope:td_target = {
+            every_in_list = {
+                variable = td_diplomacy_pairs
+                limit = {
+                    td_diplomacy_record_current_trigger = yes
+                    var:td_pair_actor = scope:td_diplomacy_actor
+                    var:td_pair_victim = scope:td_diplomacy_victim
+                }
+                save_scope_as = td_diplomacy_pair
+            }
+        }
+        if = {
+            limit = {
+                NOT = { exists = scope:td_diplomacy_pair }
+                scope:td_diplomacy_actor = {
+                    OR = {
+                        is_allied_to = scope:td_diplomacy_victim
+                        has_truce = scope:td_diplomacy_victim
+                    }
+                }
+            }
+            scope:td_diplomacy_actor = {
+                create_story = { type = td_diplomacy_record save_scope_as = td_diplomacy_pair }
+            }
+            scope:td_diplomacy_pair = {
+                set_variable = { name = td_pair_actor value = scope:td_diplomacy_actor }
+                set_variable = { name = td_pair_victim value = scope:td_diplomacy_victim }
+                set_variable = { name = td_pair_title value = scope:td_target }
+                set_variable = { name = td_pair_generation value = scope:td_target.var:td_campaign_generation }
+            }
+            scope:td_target = {
+                add_to_variable_list = { name = td_diplomacy_pairs target = scope:td_diplomacy_pair }
+            }
+        }
+        if = {
+            limit = { exists = scope:td_diplomacy_pair }
+            if = {
+                limit = { always = $REFRESH_TRUCE$ }
+                scope:td_diplomacy_pair = { remove_variable = td_pair_truce }
+            }
+            if = {
+                limit = { scope:td_diplomacy_actor = { is_allied_to = scope:td_diplomacy_victim } }
+                scope:td_diplomacy_pair = { set_variable = { name = td_pair_allied value = yes } }
+            }
+            if = {
+                limit = { scope:td_diplomacy_actor = { has_truce = scope:td_diplomacy_victim } }
+                scope:td_diplomacy_pair = { set_variable = { name = td_pair_truce value = yes } }
+            }
+        }
+    }
+}
+
+# Current character is a potential offensive participant. Called before fealty.
+td_capture_actor_diplomacy_effect = {
+    save_scope_as = td_diplomacy_actor
+    scope:td_target = {
+        every_in_list = {
+            variable = td_targets
+            limit = { is_alive = yes NOT = { this = scope:td_diplomacy_actor } }
+            save_scope_as = td_diplomacy_victim
+            td_capture_diplomacy_pair_effect = { REFRESH_TRUCE = no }
+        }
+    }
+}
+
+# Begin hook: after generation/target lists exist, before creating the title.
+td_capture_diplomacy_effect = {
+    if = {
+        limit = {
+            scope:td_target = {
+                has_variable = td_active
+                has_variable = td_gathering
+                NOT = { has_variable = td_diplomacy_settled }
+            }
+        }
+        scope:td_dominant = { td_capture_actor_diplomacy_effect = yes }
+        scope:td_target = {
+            every_in_list = {
+                variable = td_targets
+                limit = { is_alive = yes }
+                td_capture_actor_diplomacy_effect = yes
+            }
+        }
+    }
+}
+
+# Join hook: additions only. A failed/retried oath cannot duplicate a pair.
+td_capture_join_diplomacy_effect = {
+    if = {
+        limit = {
+            scope:td_target = {
+                has_variable = td_active
+                has_variable = td_gathering
+                NOT = { has_variable = td_diplomacy_settled }
+            }
+        }
+        td_capture_actor_diplomacy_effect = yes
+    }
+}
+
+# Immediately before start_war, after the final coalition preflight.
+# Only the current outgoing truce matters; the opposite direction is untouched.
+td_capture_formation_diplomacy_effect = {
+    if = {
+        limit = {
+            scope:td_target = {
+                has_variable = td_active
+                NOT = { has_variable = td_diplomacy_settled }
+            }
+        }
+        every_in_list = {
+            list = td_ready_attackers
+            save_scope_as = td_diplomacy_actor
+            every_in_list = {
+                list = td_ready_fighters
+                save_scope_as = td_diplomacy_victim
+                td_capture_diplomacy_pair_effect = { REFRESH_TRUCE = yes }
+            }
+        }
+        scope:td_target = {
+            set_variable = { name = td_diplomacy_formation_generation value = var:td_campaign_generation }
+        }
+    }
+}
+
+# Story scope. Invoke only after every accepted participant is in the native war.
+# The CB intentionally does not call generic on_declared_war: that effect also
+# breaks betrothals and applies unrelated systems. Apply each core pact penalty
+# exactly once per actual offensive/defensive pair, never to the defender.
+td_apply_diplomacy_pair_effect = {
+    if = {
+        limit = {
+            td_diplomacy_record_actual_enemies_trigger = yes
+            NOT = { has_variable = td_pair_applied }
+        }
+        set_variable = { name = td_pair_applied value = yes }
+        var:td_pair_actor = { save_scope_as = td_diplomacy_actor }
+        var:td_pair_victim = { save_scope_as = td_diplomacy_victim }
+        if = {
+            limit = { has_variable = td_pair_allied }
+            scope:td_diplomacy_actor = {
+                add_prestige = attack_ally_prestige_loss
+                add_prestige_level = attack_ally_prestige_level_loss
+                add_character_modifier = { modifier = attacked_ally years = 3 }
+                if = {
+                    limit = { is_allied_to = scope:td_diplomacy_victim }
+                    break_alliance = scope:td_diplomacy_victim
+                }
+            }
+        }
+        if = {
+            limit = { has_variable = td_pair_truce }
+            scope:td_diplomacy_actor = {
+                if = {
+                    limit = { td_diplomacy_truce_penalty_trigger = yes }
+                    if = {
+                        limit = { NOT = { has_perk = flexible_truces_perk } }
+                        add_prestige = break_truce_prestige_loss
+                        add_prestige_level = break_truce_prestige_level_loss
+                    }
+                    add_legitimacy = td_diplomacy_truce_legitimacy_loss_value
+                    add_character_modifier = { modifier = broke_truce years = 3 }
+                }
+                if = {
+                    limit = { has_truce = scope:td_diplomacy_victim }
+                    cancel_truce_one_way = scope:td_diplomacy_victim
+                }
+            }
+        }
+    }
+}
+
+td_settle_diplomacy_effect = {
+    if = {
+        limit = {
+            td_campaign_active_trigger = yes
+            td_ready_parties_joined_trigger = yes
+            scope:td_target = {
+                has_variable = td_diplomacy_formation_generation
+                NOT = { has_variable = td_diplomacy_settled }
+            }
+        }
+        if = {
+            limit = { scope:td_target.var:td_diplomacy_formation_generation = scope:td_target.var:td_campaign_generation }
+            scope:td_target = {
+                set_variable = { name = td_diplomacy_settled value = var:td_campaign_generation }
+                every_in_list = {
+                    variable = td_diplomacy_pairs
+                    td_apply_diplomacy_pair_effect = yes
+                }
+            }
+        }
+    }
+}
+
+# Called only by the actual CB victory/defeat callback, before campaign cleanup.
+# RESULT is victory or defeat, from the initiating attacker's perspective.
+td_add_settlement_truces_effect = {
+    if = {
+        limit = {
+            exists = scope:td_target.var:td_war
+            exists = scope:attacker
+            scope:attacker = { is_alive = yes this = scope:td_dominant }
+        }
+        clear_saved_scope = td_diplomacy_original_defender
+        scope:defender ?= { save_scope_as = td_diplomacy_original_defender }
+        scope:td_target = {
+            every_in_list = {
+                variable = td_fighters
+                limit = { is_alive = yes is_defender_in_war = scope:td_target.var:td_war }
+                save_scope_as = defender
+                scope:attacker = {
+                    custom_tooltip = {
+                        text = td_settlement_truce_tt
+                        add_truce_one_way = {
+                            character = scope:defender
+                            days = standard_truce_duration_days
+                            override = no
+                            war = scope:td_target.var:td_war
+                            result = $RESULT$
+                        }
+                    }
+                }
+            }
+        }
+        if = {
+            limit = { exists = scope:td_diplomacy_original_defender }
+            scope:td_diplomacy_original_defender = { save_scope_as = defender }
+        }
+        else = { clear_saved_scope = defender }
+    }
+}
+
+# End only records owned by this title/generation. Every ending record removes
+# its own reference; collect first so mutation cannot skip the next record.
+td_clear_diplomacy_effect = {
+    every_in_list = { list = td_diplomacy_to_end remove_from_list = td_diplomacy_to_end }
+    scope:td_target = {
+        every_in_list = {
+            variable = td_diplomacy_pairs
+            limit = { td_diplomacy_record_current_trigger = yes }
+            add_to_list = td_diplomacy_to_end
+        }
+    }
+    every_in_list = {
+        list = td_diplomacy_to_end
+        # Retire the reference while the story is still alive. Event-local
+        # lists survive chained events; end_story invalidates the scope.
+        remove_from_list = td_diplomacy_to_end
+        end_story = yes
+    }
+    scope:td_target = {
+        remove_variable = td_diplomacy_settled
+        remove_variable = td_diplomacy_formation_generation
+    }
+}

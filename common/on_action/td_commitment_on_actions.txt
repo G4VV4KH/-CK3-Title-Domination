@@ -1,0 +1,12 @@
+﻿# Retained only so callbacks already serialized in older saves are harmless.
+# The generation guard prevents an old callback from touching a later campaign.
+# Neither on-action schedules any new polling or waiting.
+td_poll_campaign_commitments = {
+    trigger = { td_event_campaign_current_trigger = yes }
+    effect = { td_migrate_legacy_commitment_effect = yes }
+}
+
+td_expire_campaign_commitment = {
+    trigger = { td_event_campaign_current_trigger = yes }
+    effect = { td_migrate_legacy_commitment_effect = yes }
+}

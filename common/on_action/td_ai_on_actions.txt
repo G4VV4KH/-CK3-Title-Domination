@@ -1,0 +1,20 @@
+﻿# Additive child hook; do not replace vanilla yearly pulse effects.
+# Native pulse fires once per year per playable ruler, staggered by character ID.
+yearly_playable_pulse = { on_actions = { td_ai_yearly_pulse } }
+
+td_ai_yearly_pulse = {
+	trigger = {
+		is_ai = yes
+		td_actor_eligible_trigger = yes
+		is_at_war = no
+		is_adult = yes
+		gold >= 200
+		prestige >= 300
+	}
+	effect = {
+		random = {
+			chance = 20
+			td_ai_consider_campaign_effect = yes
+		}
+	}
+}

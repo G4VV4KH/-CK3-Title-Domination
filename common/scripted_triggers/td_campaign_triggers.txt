@@ -1,0 +1,50 @@
+﻿# Event scopes are campaign-local, so different rulers can answer different wars.
+td_campaign_active_trigger = {
+    exists = scope:td_target
+    scope:td_target = {
+        has_variable = td_active
+        NOT = { has_variable = td_rolling_back }
+        exists = holder
+        exists = var:td_dominant
+        holder = var:td_dominant
+        holder = { is_alive = yes }
+        trigger_if = {
+            limit = { exists = var:td_war.primary_attacker var:td_war.primary_attacker = { is_alive = yes } }
+            holder = var:td_war.primary_attacker
+        }
+    }
+}
+
+td_response_pending_trigger = {
+    td_campaign_active_trigger = yes
+    scope:td_target = {
+        has_variable = td_gathering
+        has_variable = td_response_queue_version
+        exists = var:td_current_respondent
+        trigger_if = {
+            limit = { exists = var:td_current_respondent exists = scope:td_respondent }
+            var:td_current_respondent = scope:td_respondent
+        }
+        any_in_list = { variable = td_pending this = scope:td_respondent }
+    }
+}
+
+# An active title can host many successive campaigns. Saved event scopes belong
+# to exactly one of those campaigns, including windows already open in the UI.
+td_event_campaign_current_trigger = {
+    td_campaign_active_trigger = yes
+    exists = scope:td_event_generation
+    scope:td_target = { has_variable = td_campaign_generation }
+    trigger_if = {
+        limit = {
+            exists = scope:td_event_generation
+            scope:td_target = { has_variable = td_campaign_generation }
+        }
+        scope:td_event_generation = scope:td_target.var:td_campaign_generation
+    }
+}
+
+td_event_authority_current_trigger = {
+    td_event_campaign_current_trigger = yes
+    this = scope:td_target.var:td_dominant
+}

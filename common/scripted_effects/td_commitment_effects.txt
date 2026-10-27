@@ -1,0 +1,111 @@
+﻿td_prepare_parties_effect = {
+    every_in_list = { list = td_ready_fighters remove_from_list = td_ready_fighters }
+    every_in_list = { list = td_ready_attackers remove_from_list = td_ready_attackers }
+    scope:td_dominant = { add_to_list = td_ready_attackers }
+    scope:td_target = {
+        every_in_list = {
+            variable = td_fighters
+            limit = { td_respondent_trigger = yes }
+            add_to_list = td_ready_fighters
+        }
+        every_in_list = {
+            variable = td_joined
+            limit = { is_alive = yes is_vassal_or_below_of = scope:td_dominant NOT = { is_in_list = td_ready_attackers } }
+            add_to_list = td_ready_attackers
+        }
+    }
+
+}
+
+# All accepted participants enter together; none are silently omitted.
+td_form_coalition_effect = {
+    if = {
+        limit = { any_in_list = { list = td_ready_fighters always = yes } }
+        ordered_in_list = {
+            list = td_ready_fighters
+            order_by = current_military_strength
+            max = 1
+            save_scope_as = td_main_defender
+        }
+        scope:td_target = {
+            remove_variable = td_gathering
+            remove_variable = td_conflict_choice_pending
+            remove_variable = td_conflict_response_window
+            remove_variable = td_conflict_response_until
+            remove_variable = td_waiting_coalition
+            remove_variable = td_wait_deadline
+            remove_variable = td_wait_until
+        }
+        td_capture_formation_diplomacy_effect = yes
+        scope:td_dominant = {
+            start_war = { cb = td_domination_cb target = scope:td_main_defender target_title = scope:td_target }
+        }
+        if = {
+            limit = { exists = scope:td_target.var:td_war }
+            scope:td_target.var:td_war = { save_scope_as = td_war save_scope_as = target }
+            every_in_list = {
+                list = td_ready_fighters
+                limit = { NOT = { is_participant_in_war = scope:td_war } }
+                save_scope_as = td_party_to_add
+                if = {
+                    limit = {
+                        joiner_not_already_in_another_war_with_any_target_war_participants_trigger = { WARRIOR = scope:td_main_defender JOINER = scope:td_party_to_add }
+                        can_join_war_liege_vassal_check_trigger = { WARRIOR = scope:td_main_defender JOINER = scope:td_party_to_add }
+                    }
+                    scope:td_war = { add_defender = scope:td_party_to_add }
+                }
+            }
+            every_in_list = {
+                list = td_ready_attackers
+                limit = { NOT = { is_participant_in_war = scope:td_war } }
+                save_scope_as = td_party_to_add
+                if = {
+                    limit = {
+                        joiner_not_already_in_another_war_with_any_target_war_participants_trigger = { WARRIOR = scope:td_dominant JOINER = scope:td_party_to_add }
+                        can_join_war_liege_vassal_check_trigger = { WARRIOR = scope:td_dominant JOINER = scope:td_party_to_add }
+                    }
+                    scope:td_war = { add_attacker = scope:td_party_to_add }
+                }
+            }
+            if = {
+                limit = { NOT = { td_ready_parties_joined_trigger = yes } }
+                td_abort_formation_effect = yes
+            }
+            else = { td_settle_diplomacy_effect = yes }
+        }
+        else = { td_abort_formation_effect = yes }
+    }
+    else = { td_victory_effect = yes }
+}
+
+# A changed military situation or a rejected native command cancels/refunds once.
+td_abort_formation_effect = {
+    if = {
+        limit = {
+            scope:td_target = {
+                has_variable = td_active
+                NOT = { has_variable = td_formation_refunded }
+                NOT = { has_variable = td_rolling_back }
+            }
+        }
+        td_load_campaign_effect = yes
+        scope:td_target = { set_variable = { name = td_formation_refunded value = yes } }
+        scope:td_dominant = {
+            add_gold = scope:td_target.var:td_initial_gold_cost
+            add_prestige = scope:td_target.var:td_initial_prestige_cost
+        }
+        td_cancel_campaign_effect = yes
+        scope:td_dominant = {
+            if = { limit = { is_alive = yes is_ai = no } trigger_event = title_domination.0007 }
+        }
+    }
+}
+
+# Migration only. Retired phases cannot retain a title/vassals indefinitely after
+# this update. New campaigns never create these flags or schedule these queues.
+td_migrate_legacy_commitment_effect = {
+    if = {
+        limit = { td_campaign_active_trigger = yes td_legacy_commitment_trigger = yes }
+        td_abort_formation_effect = yes
+    }
+}

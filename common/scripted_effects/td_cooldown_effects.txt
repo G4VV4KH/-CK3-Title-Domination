@@ -1,0 +1,41 @@
+﻿# Character scope after the paid Begin transaction, before synchronous replies.
+# Native years syntax is used by religious_interaction_events.txt:1868-1871.
+# The cooldown belongs to the initiating ruler, not a successor or the dynasty.
+td_start_cooldown_effect = {
+    set_variable = {
+        name = td_domination_cooldown
+        value = scope:td_target.var:td_campaign_generation
+        years = 10
+    }
+    set_variable = {
+        name = td_domination_cooldown_title
+        value = scope:td_target
+        years = 10
+    }
+    scope:td_target = { set_variable = { name = td_cooldown_owner value = scope:td_dominant } }
+}
+
+# The target and generation must identify this exact paid attempt. A legitimate
+# heir can complete it without losing a different cooldown of their own.
+# Completed deaths do not support character-variable reads, so test life first.
+td_clear_started_cooldown_effect = {
+    scope:td_target.var:td_cooldown_owner ?= {
+        if = {
+            limit = { is_alive = yes }
+            if = {
+                limit = {
+                    has_variable = td_domination_cooldown
+                    has_variable = td_domination_cooldown_title
+                }
+                if = {
+                    limit = {
+                        var:td_domination_cooldown_title = scope:td_target
+                        var:td_domination_cooldown = scope:td_target.var:td_campaign_generation
+                    }
+                    remove_variable = td_domination_cooldown
+                    remove_variable = td_domination_cooldown_title
+                }
+            }
+        }
+    }
+}

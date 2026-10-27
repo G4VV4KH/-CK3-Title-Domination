@@ -1,0 +1,334 @@
+﻿# Build once when the preview opens. Only event-local scopes/lists are changed.
+# Strongest-first modal scenario; ties favor Fight, then Ignore, then ordinary
+# Join, then Request protection. A protection request assumes permission and
+# successful native fealty for this scenario only; the tooltip says so.
+td_build_forecast_effect = {
+    every_in_list = { list = td_fc_attackers remove_from_list = td_fc_attackers }
+    every_in_list = { list = td_fc_support remove_from_list = td_fc_support }
+    every_in_list = { list = td_fc_fighters remove_from_list = td_fc_fighters }
+    every_in_list = { list = td_fc_neutral remove_from_list = td_fc_neutral }
+    scope:td_dominant = { add_to_list = td_fc_attackers }
+    save_scope_value_as = { name = td_fc_own_strength value = scope:td_dominant.current_military_strength }
+    save_scope_value_as = { name = td_fc_conditional_count value = 0 }
+    save_scope_value_as = { name = td_fc_conditional_strength value = 0 }
+    save_scope_value_as = { name = td_fc_support_count value = 0 }
+    save_scope_value_as = { name = td_fc_support_strength value = 0 }
+    save_scope_value_as = { name = td_fc_support_shown_strength value = 0 }
+    save_scope_value_as = { name = td_fc_fighters_count value = 0 }
+    save_scope_value_as = { name = td_fc_fighters_strength value = 0 }
+    save_scope_value_as = { name = td_fc_fighters_shown_strength value = 0 }
+    save_scope_value_as = { name = td_fc_neutral_count value = 0 }
+    save_scope_value_as = { name = td_fc_neutral_strength value = 0 }
+    save_scope_value_as = { name = td_fc_neutral_shown_strength value = 0 }
+    clear_saved_scope = td_fc_support_1
+    clear_saved_scope = td_fc_support_2
+    clear_saved_scope = td_fc_support_3
+    clear_saved_scope = td_fc_support_4
+    clear_saved_scope = td_fc_support_5
+    clear_saved_scope = td_fc_fighters_1
+    clear_saved_scope = td_fc_fighters_2
+    clear_saved_scope = td_fc_fighters_3
+    clear_saved_scope = td_fc_fighters_4
+    clear_saved_scope = td_fc_fighters_5
+    clear_saved_scope = td_fc_neutral_1
+    clear_saved_scope = td_fc_neutral_2
+    clear_saved_scope = td_fc_neutral_3
+    clear_saved_scope = td_fc_neutral_4
+    clear_saved_scope = td_fc_neutral_5
+    # Ordered iterators otherwise select only the strongest entry. Process the
+    # complete collected set; top-five display limits are applied per group.
+    save_scope_value_as = { name = td_fc_target_count value = { value = 0 every_in_list = { list = td_targets add = 1 } } }
+    if = {
+    limit = { scope:td_fc_target_count > 0 }
+    ordered_in_list = {
+        list = td_targets
+        order_by = current_military_strength
+        max = scope:td_fc_target_count
+        check_range_bounds = no
+        save_scope_value_as = { name = td_fc_candidate_strength value = current_military_strength }
+        save_scope_value_as = { name = td_fc_fight_weight value = td_forecast_fight_weight_value }
+        save_scope_value_as = { name = td_fc_ignore_weight value = td_ai_ignore_weight_value }
+        save_scope_value_as = { name = td_fc_join_weight value = td_forecast_join_weight_value }
+        save_scope_value_as = { name = td_fc_religion_weight value = td_forecast_religion_weight_value }
+        save_scope_value_as = { name = td_fc_total_weight value = {
+            value = scope:td_fc_fight_weight add = scope:td_fc_ignore_weight
+            add = scope:td_fc_join_weight add = scope:td_fc_religion_weight
+        } }
+        save_scope_value_as = { name = td_fc_selected_conditional value = 0 }
+        if = {
+            limit = {
+                scope:td_fc_fight_weight >= scope:td_fc_ignore_weight
+                scope:td_fc_fight_weight >= scope:td_fc_join_weight
+                scope:td_fc_fight_weight >= scope:td_fc_religion_weight
+            }
+            save_scope_value_as = { name = td_fc_selected_weight value = scope:td_fc_fight_weight }
+            td_forecast_record_fighter_effect = yes
+        }
+        else_if = {
+            limit = {
+                scope:td_fc_ignore_weight >= scope:td_fc_join_weight
+                scope:td_fc_ignore_weight >= scope:td_fc_religion_weight
+            }
+            save_scope_value_as = { name = td_fc_selected_weight value = scope:td_fc_ignore_weight }
+            td_forecast_record_neutral_effect = yes
+        }
+        else = {
+            if = {
+                limit = { scope:td_fc_join_weight >= scope:td_fc_religion_weight }
+                save_scope_value_as = { name = td_fc_selected_weight value = scope:td_fc_join_weight }
+            }
+            else = {
+                save_scope_value_as = { name = td_fc_selected_weight value = scope:td_fc_religion_weight }
+                save_scope_value_as = { name = td_fc_selected_conditional value = 1 }
+                save_scope_value_as = { name = td_fc_conditional_count value = { value = scope:td_fc_conditional_count add = 1 } }
+                save_scope_value_as = { name = td_fc_conditional_strength value = { value = scope:td_fc_conditional_strength add = scope:td_fc_candidate_strength } }
+            }
+            td_forecast_record_support_effect = yes
+        }
+    }
+    }
+    save_scope_value_as = { name = td_fc_side_strength value = { value = scope:td_fc_own_strength add = scope:td_fc_support_strength } }
+    save_scope_value_as = { name = td_fc_ratio value = 0 }
+    save_scope_value_as = { name = td_fc_own_share value = 0 }
+    if = { limit = { scope:td_fc_fighters_strength > 0 }
+    save_scope_value_as = { name = td_fc_ratio value = { value = scope:td_fc_side_strength divide = scope:td_fc_fighters_strength } }
+    }
+    if = { limit = { scope:td_fc_side_strength > 0 }
+    save_scope_value_as = { name = td_fc_own_share value = { value = scope:td_fc_own_strength divide = scope:td_fc_side_strength } }
+    }
+    save_scope_value_as = { name = td_fc_support_rest_count value = { value = scope:td_fc_support_count subtract = 5 min = 0 } }
+    save_scope_value_as = { name = td_fc_support_rest_strength value = { value = scope:td_fc_support_strength subtract = scope:td_fc_support_shown_strength min = 0 } }
+    save_scope_value_as = { name = td_fc_support_1_share value = 0 }
+    if = { limit = { exists = scope:td_fc_support_1 scope:td_fc_side_strength > 0 }
+    save_scope_value_as = { name = td_fc_support_1_share value = { value = scope:td_fc_support_1_strength divide = scope:td_fc_side_strength } }
+    }
+    save_scope_value_as = { name = td_fc_support_2_share value = 0 }
+    if = { limit = { exists = scope:td_fc_support_2 scope:td_fc_side_strength > 0 }
+    save_scope_value_as = { name = td_fc_support_2_share value = { value = scope:td_fc_support_2_strength divide = scope:td_fc_side_strength } }
+    }
+    save_scope_value_as = { name = td_fc_support_3_share value = 0 }
+    if = { limit = { exists = scope:td_fc_support_3 scope:td_fc_side_strength > 0 }
+    save_scope_value_as = { name = td_fc_support_3_share value = { value = scope:td_fc_support_3_strength divide = scope:td_fc_side_strength } }
+    }
+    save_scope_value_as = { name = td_fc_support_4_share value = 0 }
+    if = { limit = { exists = scope:td_fc_support_4 scope:td_fc_side_strength > 0 }
+    save_scope_value_as = { name = td_fc_support_4_share value = { value = scope:td_fc_support_4_strength divide = scope:td_fc_side_strength } }
+    }
+    save_scope_value_as = { name = td_fc_support_5_share value = 0 }
+    if = { limit = { exists = scope:td_fc_support_5 scope:td_fc_side_strength > 0 }
+    save_scope_value_as = { name = td_fc_support_5_share value = { value = scope:td_fc_support_5_strength divide = scope:td_fc_side_strength } }
+    }
+    save_scope_value_as = { name = td_fc_fighters_rest_count value = { value = scope:td_fc_fighters_count subtract = 5 min = 0 } }
+    save_scope_value_as = { name = td_fc_fighters_rest_strength value = { value = scope:td_fc_fighters_strength subtract = scope:td_fc_fighters_shown_strength min = 0 } }
+    save_scope_value_as = { name = td_fc_fighters_1_share value = 0 }
+    if = { limit = { exists = scope:td_fc_fighters_1 scope:td_fc_fighters_strength > 0 }
+    save_scope_value_as = { name = td_fc_fighters_1_share value = { value = scope:td_fc_fighters_1_strength divide = scope:td_fc_fighters_strength } }
+    }
+    save_scope_value_as = { name = td_fc_fighters_2_share value = 0 }
+    if = { limit = { exists = scope:td_fc_fighters_2 scope:td_fc_fighters_strength > 0 }
+    save_scope_value_as = { name = td_fc_fighters_2_share value = { value = scope:td_fc_fighters_2_strength divide = scope:td_fc_fighters_strength } }
+    }
+    save_scope_value_as = { name = td_fc_fighters_3_share value = 0 }
+    if = { limit = { exists = scope:td_fc_fighters_3 scope:td_fc_fighters_strength > 0 }
+    save_scope_value_as = { name = td_fc_fighters_3_share value = { value = scope:td_fc_fighters_3_strength divide = scope:td_fc_fighters_strength } }
+    }
+    save_scope_value_as = { name = td_fc_fighters_4_share value = 0 }
+    if = { limit = { exists = scope:td_fc_fighters_4 scope:td_fc_fighters_strength > 0 }
+    save_scope_value_as = { name = td_fc_fighters_4_share value = { value = scope:td_fc_fighters_4_strength divide = scope:td_fc_fighters_strength } }
+    }
+    save_scope_value_as = { name = td_fc_fighters_5_share value = 0 }
+    if = { limit = { exists = scope:td_fc_fighters_5 scope:td_fc_fighters_strength > 0 }
+    save_scope_value_as = { name = td_fc_fighters_5_share value = { value = scope:td_fc_fighters_5_strength divide = scope:td_fc_fighters_strength } }
+    }
+    save_scope_value_as = { name = td_fc_neutral_rest_count value = { value = scope:td_fc_neutral_count subtract = 5 min = 0 } }
+    save_scope_value_as = { name = td_fc_neutral_rest_strength value = { value = scope:td_fc_neutral_strength subtract = scope:td_fc_neutral_shown_strength min = 0 } }
+    save_scope_value_as = { name = td_fc_neutral_1_share value = 0 }
+    if = { limit = { exists = scope:td_fc_neutral_1 scope:td_fc_neutral_strength > 0 }
+    save_scope_value_as = { name = td_fc_neutral_1_share value = { value = scope:td_fc_neutral_1_strength divide = scope:td_fc_neutral_strength } }
+    }
+    save_scope_value_as = { name = td_fc_neutral_2_share value = 0 }
+    if = { limit = { exists = scope:td_fc_neutral_2 scope:td_fc_neutral_strength > 0 }
+    save_scope_value_as = { name = td_fc_neutral_2_share value = { value = scope:td_fc_neutral_2_strength divide = scope:td_fc_neutral_strength } }
+    }
+    save_scope_value_as = { name = td_fc_neutral_3_share value = 0 }
+    if = { limit = { exists = scope:td_fc_neutral_3 scope:td_fc_neutral_strength > 0 }
+    save_scope_value_as = { name = td_fc_neutral_3_share value = { value = scope:td_fc_neutral_3_strength divide = scope:td_fc_neutral_strength } }
+    }
+    save_scope_value_as = { name = td_fc_neutral_4_share value = 0 }
+    if = { limit = { exists = scope:td_fc_neutral_4 scope:td_fc_neutral_strength > 0 }
+    save_scope_value_as = { name = td_fc_neutral_4_share value = { value = scope:td_fc_neutral_4_strength divide = scope:td_fc_neutral_strength } }
+    }
+    save_scope_value_as = { name = td_fc_neutral_5_share value = 0 }
+    if = { limit = { exists = scope:td_fc_neutral_5 scope:td_fc_neutral_strength > 0 }
+    save_scope_value_as = { name = td_fc_neutral_5_share value = { value = scope:td_fc_neutral_5_strength divide = scope:td_fc_neutral_strength } }
+    }
+}
+
+td_forecast_record_support_effect = {
+    add_to_list = td_fc_support
+    add_to_list = td_fc_attackers
+    save_scope_value_as = { name = td_fc_support_count value = { value = scope:td_fc_support_count add = 1 } }
+    save_scope_value_as = { name = td_fc_support_strength value = { value = scope:td_fc_support_strength add = scope:td_fc_candidate_strength } }
+    if = { limit = { scope:td_fc_support_count = 1 }
+        save_scope_as = td_fc_support_1
+    save_scope_value_as = { name = td_fc_support_1_strength value = scope:td_fc_candidate_strength }
+    save_scope_value_as = { name = td_fc_support_1_conditional value = scope:td_fc_selected_conditional }
+    save_scope_value_as = { name = td_fc_support_1_probability value = 0 }
+        if = { limit = { scope:td_fc_total_weight > 0 }
+    save_scope_value_as = { name = td_fc_support_1_probability value = { value = scope:td_fc_selected_weight divide = scope:td_fc_total_weight } }
+        }
+    save_scope_value_as = { name = td_fc_support_shown_strength value = { value = scope:td_fc_support_shown_strength add = scope:td_fc_candidate_strength } }
+    }
+    if = { limit = { scope:td_fc_support_count = 2 }
+        save_scope_as = td_fc_support_2
+    save_scope_value_as = { name = td_fc_support_2_strength value = scope:td_fc_candidate_strength }
+    save_scope_value_as = { name = td_fc_support_2_conditional value = scope:td_fc_selected_conditional }
+    save_scope_value_as = { name = td_fc_support_2_probability value = 0 }
+        if = { limit = { scope:td_fc_total_weight > 0 }
+    save_scope_value_as = { name = td_fc_support_2_probability value = { value = scope:td_fc_selected_weight divide = scope:td_fc_total_weight } }
+        }
+    save_scope_value_as = { name = td_fc_support_shown_strength value = { value = scope:td_fc_support_shown_strength add = scope:td_fc_candidate_strength } }
+    }
+    if = { limit = { scope:td_fc_support_count = 3 }
+        save_scope_as = td_fc_support_3
+    save_scope_value_as = { name = td_fc_support_3_strength value = scope:td_fc_candidate_strength }
+    save_scope_value_as = { name = td_fc_support_3_conditional value = scope:td_fc_selected_conditional }
+    save_scope_value_as = { name = td_fc_support_3_probability value = 0 }
+        if = { limit = { scope:td_fc_total_weight > 0 }
+    save_scope_value_as = { name = td_fc_support_3_probability value = { value = scope:td_fc_selected_weight divide = scope:td_fc_total_weight } }
+        }
+    save_scope_value_as = { name = td_fc_support_shown_strength value = { value = scope:td_fc_support_shown_strength add = scope:td_fc_candidate_strength } }
+    }
+    if = { limit = { scope:td_fc_support_count = 4 }
+        save_scope_as = td_fc_support_4
+    save_scope_value_as = { name = td_fc_support_4_strength value = scope:td_fc_candidate_strength }
+    save_scope_value_as = { name = td_fc_support_4_conditional value = scope:td_fc_selected_conditional }
+    save_scope_value_as = { name = td_fc_support_4_probability value = 0 }
+        if = { limit = { scope:td_fc_total_weight > 0 }
+    save_scope_value_as = { name = td_fc_support_4_probability value = { value = scope:td_fc_selected_weight divide = scope:td_fc_total_weight } }
+        }
+    save_scope_value_as = { name = td_fc_support_shown_strength value = { value = scope:td_fc_support_shown_strength add = scope:td_fc_candidate_strength } }
+    }
+    if = { limit = { scope:td_fc_support_count = 5 }
+        save_scope_as = td_fc_support_5
+    save_scope_value_as = { name = td_fc_support_5_strength value = scope:td_fc_candidate_strength }
+    save_scope_value_as = { name = td_fc_support_5_conditional value = scope:td_fc_selected_conditional }
+    save_scope_value_as = { name = td_fc_support_5_probability value = 0 }
+        if = { limit = { scope:td_fc_total_weight > 0 }
+    save_scope_value_as = { name = td_fc_support_5_probability value = { value = scope:td_fc_selected_weight divide = scope:td_fc_total_weight } }
+        }
+    save_scope_value_as = { name = td_fc_support_shown_strength value = { value = scope:td_fc_support_shown_strength add = scope:td_fc_candidate_strength } }
+    }
+}
+
+td_forecast_record_fighter_effect = {
+    add_to_list = td_fc_fighters
+    save_scope_value_as = { name = td_fc_fighters_count value = { value = scope:td_fc_fighters_count add = 1 } }
+    save_scope_value_as = { name = td_fc_fighters_strength value = { value = scope:td_fc_fighters_strength add = scope:td_fc_candidate_strength } }
+    if = { limit = { scope:td_fc_fighters_count = 1 }
+        save_scope_as = td_fc_fighters_1
+    save_scope_value_as = { name = td_fc_fighters_1_strength value = scope:td_fc_candidate_strength }
+    save_scope_value_as = { name = td_fc_fighters_1_conditional value = scope:td_fc_selected_conditional }
+    save_scope_value_as = { name = td_fc_fighters_1_probability value = 0 }
+        if = { limit = { scope:td_fc_total_weight > 0 }
+    save_scope_value_as = { name = td_fc_fighters_1_probability value = { value = scope:td_fc_selected_weight divide = scope:td_fc_total_weight } }
+        }
+    save_scope_value_as = { name = td_fc_fighters_shown_strength value = { value = scope:td_fc_fighters_shown_strength add = scope:td_fc_candidate_strength } }
+    }
+    if = { limit = { scope:td_fc_fighters_count = 2 }
+        save_scope_as = td_fc_fighters_2
+    save_scope_value_as = { name = td_fc_fighters_2_strength value = scope:td_fc_candidate_strength }
+    save_scope_value_as = { name = td_fc_fighters_2_conditional value = scope:td_fc_selected_conditional }
+    save_scope_value_as = { name = td_fc_fighters_2_probability value = 0 }
+        if = { limit = { scope:td_fc_total_weight > 0 }
+    save_scope_value_as = { name = td_fc_fighters_2_probability value = { value = scope:td_fc_selected_weight divide = scope:td_fc_total_weight } }
+        }
+    save_scope_value_as = { name = td_fc_fighters_shown_strength value = { value = scope:td_fc_fighters_shown_strength add = scope:td_fc_candidate_strength } }
+    }
+    if = { limit = { scope:td_fc_fighters_count = 3 }
+        save_scope_as = td_fc_fighters_3
+    save_scope_value_as = { name = td_fc_fighters_3_strength value = scope:td_fc_candidate_strength }
+    save_scope_value_as = { name = td_fc_fighters_3_conditional value = scope:td_fc_selected_conditional }
+    save_scope_value_as = { name = td_fc_fighters_3_probability value = 0 }
+        if = { limit = { scope:td_fc_total_weight > 0 }
+    save_scope_value_as = { name = td_fc_fighters_3_probability value = { value = scope:td_fc_selected_weight divide = scope:td_fc_total_weight } }
+        }
+    save_scope_value_as = { name = td_fc_fighters_shown_strength value = { value = scope:td_fc_fighters_shown_strength add = scope:td_fc_candidate_strength } }
+    }
+    if = { limit = { scope:td_fc_fighters_count = 4 }
+        save_scope_as = td_fc_fighters_4
+    save_scope_value_as = { name = td_fc_fighters_4_strength value = scope:td_fc_candidate_strength }
+    save_scope_value_as = { name = td_fc_fighters_4_conditional value = scope:td_fc_selected_conditional }
+    save_scope_value_as = { name = td_fc_fighters_4_probability value = 0 }
+        if = { limit = { scope:td_fc_total_weight > 0 }
+    save_scope_value_as = { name = td_fc_fighters_4_probability value = { value = scope:td_fc_selected_weight divide = scope:td_fc_total_weight } }
+        }
+    save_scope_value_as = { name = td_fc_fighters_shown_strength value = { value = scope:td_fc_fighters_shown_strength add = scope:td_fc_candidate_strength } }
+    }
+    if = { limit = { scope:td_fc_fighters_count = 5 }
+        save_scope_as = td_fc_fighters_5
+    save_scope_value_as = { name = td_fc_fighters_5_strength value = scope:td_fc_candidate_strength }
+    save_scope_value_as = { name = td_fc_fighters_5_conditional value = scope:td_fc_selected_conditional }
+    save_scope_value_as = { name = td_fc_fighters_5_probability value = 0 }
+        if = { limit = { scope:td_fc_total_weight > 0 }
+    save_scope_value_as = { name = td_fc_fighters_5_probability value = { value = scope:td_fc_selected_weight divide = scope:td_fc_total_weight } }
+        }
+    save_scope_value_as = { name = td_fc_fighters_shown_strength value = { value = scope:td_fc_fighters_shown_strength add = scope:td_fc_candidate_strength } }
+    }
+}
+
+td_forecast_record_neutral_effect = {
+    add_to_list = td_fc_neutral
+    save_scope_value_as = { name = td_fc_neutral_count value = { value = scope:td_fc_neutral_count add = 1 } }
+    save_scope_value_as = { name = td_fc_neutral_strength value = { value = scope:td_fc_neutral_strength add = scope:td_fc_candidate_strength } }
+    if = { limit = { scope:td_fc_neutral_count = 1 }
+        save_scope_as = td_fc_neutral_1
+    save_scope_value_as = { name = td_fc_neutral_1_strength value = scope:td_fc_candidate_strength }
+    save_scope_value_as = { name = td_fc_neutral_1_conditional value = scope:td_fc_selected_conditional }
+    save_scope_value_as = { name = td_fc_neutral_1_probability value = 0 }
+        if = { limit = { scope:td_fc_total_weight > 0 }
+    save_scope_value_as = { name = td_fc_neutral_1_probability value = { value = scope:td_fc_selected_weight divide = scope:td_fc_total_weight } }
+        }
+    save_scope_value_as = { name = td_fc_neutral_shown_strength value = { value = scope:td_fc_neutral_shown_strength add = scope:td_fc_candidate_strength } }
+    }
+    if = { limit = { scope:td_fc_neutral_count = 2 }
+        save_scope_as = td_fc_neutral_2
+    save_scope_value_as = { name = td_fc_neutral_2_strength value = scope:td_fc_candidate_strength }
+    save_scope_value_as = { name = td_fc_neutral_2_conditional value = scope:td_fc_selected_conditional }
+    save_scope_value_as = { name = td_fc_neutral_2_probability value = 0 }
+        if = { limit = { scope:td_fc_total_weight > 0 }
+    save_scope_value_as = { name = td_fc_neutral_2_probability value = { value = scope:td_fc_selected_weight divide = scope:td_fc_total_weight } }
+        }
+    save_scope_value_as = { name = td_fc_neutral_shown_strength value = { value = scope:td_fc_neutral_shown_strength add = scope:td_fc_candidate_strength } }
+    }
+    if = { limit = { scope:td_fc_neutral_count = 3 }
+        save_scope_as = td_fc_neutral_3
+    save_scope_value_as = { name = td_fc_neutral_3_strength value = scope:td_fc_candidate_strength }
+    save_scope_value_as = { name = td_fc_neutral_3_conditional value = scope:td_fc_selected_conditional }
+    save_scope_value_as = { name = td_fc_neutral_3_probability value = 0 }
+        if = { limit = { scope:td_fc_total_weight > 0 }
+    save_scope_value_as = { name = td_fc_neutral_3_probability value = { value = scope:td_fc_selected_weight divide = scope:td_fc_total_weight } }
+        }
+    save_scope_value_as = { name = td_fc_neutral_shown_strength value = { value = scope:td_fc_neutral_shown_strength add = scope:td_fc_candidate_strength } }
+    }
+    if = { limit = { scope:td_fc_neutral_count = 4 }
+        save_scope_as = td_fc_neutral_4
+    save_scope_value_as = { name = td_fc_neutral_4_strength value = scope:td_fc_candidate_strength }
+    save_scope_value_as = { name = td_fc_neutral_4_conditional value = scope:td_fc_selected_conditional }
+    save_scope_value_as = { name = td_fc_neutral_4_probability value = 0 }
+        if = { limit = { scope:td_fc_total_weight > 0 }
+    save_scope_value_as = { name = td_fc_neutral_4_probability value = { value = scope:td_fc_selected_weight divide = scope:td_fc_total_weight } }
+        }
+    save_scope_value_as = { name = td_fc_neutral_shown_strength value = { value = scope:td_fc_neutral_shown_strength add = scope:td_fc_candidate_strength } }
+    }
+    if = { limit = { scope:td_fc_neutral_count = 5 }
+        save_scope_as = td_fc_neutral_5
+    save_scope_value_as = { name = td_fc_neutral_5_strength value = scope:td_fc_candidate_strength }
+    save_scope_value_as = { name = td_fc_neutral_5_conditional value = scope:td_fc_selected_conditional }
+    save_scope_value_as = { name = td_fc_neutral_5_probability value = 0 }
+        if = { limit = { scope:td_fc_total_weight > 0 }
+    save_scope_value_as = { name = td_fc_neutral_5_probability value = { value = scope:td_fc_selected_weight divide = scope:td_fc_total_weight } }
+        }
+    save_scope_value_as = { name = td_fc_neutral_shown_strength value = { value = scope:td_fc_neutral_shown_strength add = scope:td_fc_candidate_strength } }
+    }
+}

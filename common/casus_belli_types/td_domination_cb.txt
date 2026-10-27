@@ -1,0 +1,92 @@
+﻿td_domination_cb = {
+    icon = county_conquest_cb
+    group = event
+    allowed_for_character = { always = no }
+    target_titles = all
+    target_de_jure_regions_above = yes
+    use_de_jure_wargoal_only = yes
+    target_top_liege_if_outside_realm = no
+    should_check_for_interface_availability = no
+    should_show_war_goal_subview = yes
+    white_peace_possible = no
+    allow_hostages = no
+    check_all_defenders_for_ticking_war_score = yes
+    attacker_score_from_occupation_scale = 150
+    attacker_score_from_battles_scale = 150
+    defender_score_from_battles_scale = 150
+    max_attacker_score_from_battles = 100
+    max_defender_score_from_battles = 100
+    attacker_wargoal_percentage = 1.5
+    defender_ticking_warscore = 0.05
+    imprisonment_by_attacker_give_war_score = no
+    ai = no
+    cost = { prestige = 0 }
+    should_invalidate = {
+        any_in_list = {
+            list = target_titles
+            OR = {
+                NOT = { has_variable = td_active }
+                NOT = { holder = scope:attacker }
+            }
+        }
+    }
+    on_declaration = {
+        scope:attacker = { save_scope_as = td_dominant }
+        scope:war = { save_scope_as = td_war }
+        every_in_list = {
+            list = target_titles
+            set_variable = { name = td_war value = scope:td_war }
+        }
+    }
+    on_victory_desc = { desc = td_domination_victory }
+    on_defeat_desc = { desc = td_domination_defeat }
+    on_white_peace_desc = { desc = td_domination_defeat }
+    on_invalidated_desc = { desc = td_domination_defeat }
+    on_victory = {
+        scope:attacker = { save_scope_as = td_dominant }
+        every_in_list = {
+            list = target_titles
+            limit = { has_variable = td_active NOT = { has_variable = td_rolling_back } }
+            save_scope_as = td_target
+            scope:td_dominant = { td_add_settlement_truces_effect = { RESULT = victory } td_victory_effect = yes }
+        }
+    }
+    on_defeat = {
+        scope:attacker = { save_scope_as = td_dominant }
+        every_in_list = {
+            list = target_titles
+            limit = { has_variable = td_active NOT = { has_variable = td_rolling_back } }
+            save_scope_as = td_target
+            scope:td_dominant = { td_add_settlement_truces_effect = { RESULT = defeat } td_defeat_effect = yes }
+        }
+    }
+    on_white_peace = {
+        scope:attacker = { save_scope_as = td_dominant }
+        every_in_list = {
+            list = target_titles
+            limit = { has_variable = td_active NOT = { has_variable = td_rolling_back } }
+            save_scope_as = td_target
+            scope:td_dominant = { td_rollback_effect = yes td_clear_campaign_effect = yes }
+        }
+    }
+    on_invalidated = {
+        scope:attacker = { save_scope_as = td_dominant }
+        every_in_list = {
+            list = target_titles
+            limit = { has_variable = td_active NOT = { has_variable = td_rolling_back } }
+            save_scope_as = td_target
+            scope:td_dominant = { td_rollback_effect = yes td_clear_campaign_effect = yes }
+        }
+    }
+    on_primary_attacker_death = inherit
+    on_primary_defender_death = inherit
+    check_attacker_inheritance_validity = no
+    check_defender_inheritance_validity = no
+    attacker_allies_inherit = yes
+    defender_allies_inherit = yes
+    transfer_behavior = transfer
+    war_name = td_domination_war
+    war_name_base = td_domination_war
+    cb_name = td_domination_cb
+    interface_priority = 75
+}

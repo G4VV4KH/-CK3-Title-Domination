@@ -1,0 +1,41 @@
+﻿# A record is a directed actor -> victim pact snapshot for exactly one campaign.
+# Scope: td_diplomacy_pair story; td_target is the campaign title.
+td_diplomacy_record_current_trigger = {
+    exists = var:td_pair_title
+    exists = scope:td_target
+    has_variable = td_pair_generation
+    trigger_if = {
+        limit = { exists = var:td_pair_title exists = scope:td_target has_variable = td_pair_generation }
+        var:td_pair_title = scope:td_target
+        scope:td_target = { has_variable = td_campaign_generation }
+        trigger_if = {
+            limit = { scope:td_target = { has_variable = td_campaign_generation } }
+            var:td_pair_generation = scope:td_target.var:td_campaign_generation
+        }
+        trigger_else = { always = no }
+    }
+    trigger_else = { always = no }
+}
+
+td_diplomacy_record_actual_enemies_trigger = {
+    td_diplomacy_record_current_trigger = yes
+    exists = var:td_pair_actor
+    exists = var:td_pair_victim
+    exists = scope:td_target.var:td_war
+    trigger_if = {
+        limit = {
+            exists = var:td_pair_actor
+            exists = var:td_pair_victim
+            exists = scope:td_target.var:td_war
+        }
+        var:td_pair_actor = { is_alive = yes is_attacker_in_war = scope:td_target.var:td_war }
+        var:td_pair_victim = { is_alive = yes is_defender_in_war = scope:td_target.var:td_war }
+    }
+    trigger_else = { always = no }
+}
+
+# Diplomatic pacts never gate a defensive Fight or assign a coalition side.
+# The exemption mirrors the installed on_declared_war truce-penalty guard.
+td_diplomacy_truce_penalty_trigger = {
+    NOT = { has_character_flag = allowed_war_declaration_sans_truce_penalties }
+}

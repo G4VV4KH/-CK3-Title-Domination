@@ -1,0 +1,635 @@
+﻿# Inputs for entry: actor character, td_dominant actor, td_target selected title.
+# Campaign state belongs to the title, not a UI window or a temporary event.
+td_collect_targets_effect = {
+    every_in_list = { list = td_targets remove_from_list = td_targets }
+    scope:td_target = {
+        every_de_jure_top_liege = {
+            limit = { td_respondent_trigger = yes NOT = { is_in_list = td_targets } }
+            add_to_list = td_targets
+        }
+    }
+}
+
+td_open_preview_effect = {
+    save_scope_as = td_dominant
+    if = {
+        limit = { td_actor_eligible_trigger = yes scope:td_target = { td_target_eligible_trigger = yes } }
+        td_collect_targets_effect = yes
+        td_build_forecast_effect = yes
+        trigger_event = title_domination.0001
+    }
+}
+
+td_begin_effect = {
+    save_scope_as = td_dominant
+    if = {
+        limit = {
+            td_actor_eligible_trigger = yes
+            td_can_afford_trigger = yes
+            scope:td_target = { td_target_eligible_trigger = yes }
+        }
+        td_collect_targets_effect = yes
+        # Lock costs before rank, government or title ownership can change.
+        scope:td_target = {
+            # Persistent across cleanup: delayed dialogs from older attempts
+            # must never operate on the next campaign for this same title.
+            if = {
+                limit = { has_variable = td_campaign_generation }
+                change_variable = { name = td_campaign_generation add = 1 }
+            }
+            else = { set_variable = { name = td_campaign_generation value = 1 } }
+            set_variable = { name = td_active value = 1 }
+            set_variable = { name = td_gathering value = 1 }
+            set_variable = { name = td_response_queue_version value = 1 }
+            set_variable = { name = td_response_turn value = 0 }
+            add_to_global_variable_list = { name = td_active_campaigns target = scope:td_target }
+            set_variable = { name = td_dominant value = scope:td_dominant }
+            set_variable = { name = td_original_primary value = scope:td_dominant.primary_title }
+            set_variable = { name = td_initial_gold_cost value = td_gold_cost_value }
+            set_variable = { name = td_initial_prestige_cost value = td_prestige_cost_value }
+            clear_variable_list = td_lock_holders
+            clear_variable_list = td_targets
+            clear_variable_list = td_pending
+            clear_variable_list = td_fighters
+            clear_variable_list = td_joined
+            clear_variable_list = td_deferred_support
+            clear_variable_list = td_neutral
+            clear_variable_list = td_refused
+        }
+        # Event tooltip evaluation does not commit set_variable. Only the real
+        # transaction may read its freshly locked costs or create native objects.
+        if = {
+        limit = { scope:td_target = { has_variable = td_active has_variable = td_initial_gold_cost } }
+        td_capture_event_generation_effect = yes
+        td_register_campaign_actor_effect = yes
+        remove_short_term_gold = scope:td_target.var:td_initial_gold_cost
+        add_prestige = { value = scope:td_target.var:td_initial_prestige_cost multiply = -1 }
+        td_start_cooldown_effect = yes
+        every_in_list = {
+            list = td_targets
+            save_scope_as = td_candidate
+            scope:td_target = {
+                add_to_variable_list = { name = td_targets target = scope:td_candidate }
+                add_to_variable_list = { name = td_pending target = scope:td_candidate }
+            }
+        }
+        # Preserve agreements before rank and voluntary fealty can change them.
+        td_capture_diplomacy_effect = yes
+        create_title_and_vassal_change = { type = created save_scope_as = td_change }
+        scope:td_target = { change_title_holder = { holder = scope:td_dominant change = scope:td_change } }
+        resolve_title_and_vassal_change = scope:td_change
+        if = {
+            limit = { any_in_list = { list = td_targets always = yes } }
+            td_pump_response_queue_effect = yes
+        }
+        else = { td_victory_effect = yes }
+        }
+    }
+}
+
+# Only a recorded participant or the actual native attacker can own authority.
+# Holding a gifted provisional title never makes its recipient the dominant.
+td_load_campaign_effect = {
+    clear_saved_scope = td_dominant
+    clear_saved_scope = td_war
+    scope:td_target.var:td_dominant ?= { save_scope_as = td_dominant }
+    scope:td_target.var:td_war ?= { save_scope_as = td_war }
+    if = {
+        limit = {
+            exists = scope:td_war.primary_attacker
+            scope:td_war.primary_attacker = {
+                is_alive = yes
+                has_title = scope:td_target
+                OR = {
+                    NOT = { has_variable = td_active_title }
+                    var:td_active_title = scope:td_target
+                }
+            }
+        }
+        scope:td_war.primary_attacker = { save_scope_as = td_dominant }
+        scope:td_target = { set_variable = { name = td_dominant value = scope:td_dominant } }
+    }
+    scope:td_dominant ?= {
+        if = { limit = { is_alive = yes has_title = scope:td_target } td_register_campaign_actor_effect = yes }
+    }
+}
+
+td_register_campaign_actor_effect = {
+    if = {
+        limit = {
+            OR = {
+                NOT = { has_variable = td_active_title }
+                var:td_active_title = scope:td_target
+            }
+        }
+        save_scope_as = td_actor_to_lock
+        set_variable = { name = td_active_title value = scope:td_target }
+        scope:td_target = {
+            if = {
+                limit = { NOT = { any_in_list = { variable = td_lock_holders this = scope:td_actor_to_lock } } }
+                add_to_variable_list = { name = td_lock_holders target = scope:td_actor_to_lock }
+            }
+        }
+    }
+}
+
+td_choose_fight_effect = {
+    save_scope_as = td_respondent
+    if = {
+        limit = { td_response_pending_trigger = yes td_response_choice_phase_trigger = yes }
+        td_load_campaign_effect = yes
+        if = {
+            limit = { td_can_fight_trigger = yes }
+            scope:td_target = {
+                remove_list_variable = { name = td_pending target = scope:td_respondent }
+                add_to_variable_list = { name = td_fighters target = scope:td_respondent }
+            }
+            td_finish_response_turn_effect = yes
+        }
+    }
+}
+
+# Responses settle before the native war exists. A committed fighter is therefore
+# chosen as primary defender; a neutral never has to leave that engine-only role.
+td_maybe_start_war_effect = {
+    if = {
+        limit = {
+            td_campaign_active_trigger = yes
+            scope:td_target = {
+                has_variable = td_gathering
+                NOT = { any_in_list = { variable = td_pending always = yes } }
+                NOT = { exists = var:td_current_respondent }
+                NOT = { has_variable = td_conflict_choice_pending }
+                NOT = { has_variable = td_waiting_coalition }
+            }
+        }
+        td_load_campaign_effect = yes
+        td_prepare_parties_effect = yes
+        if = {
+            limit = { td_ready_parties_compatible_trigger = yes }
+            if = {
+                limit = { any_in_list = { list = td_ready_fighters always = yes } }
+                td_form_coalition_effect = yes
+            }
+            else = { td_victory_effect = yes }
+        }
+        else = { td_abort_formation_effect = yes }
+    }
+}
+
+td_finish_departure_effect = { td_finish_response_turn_effect = yes }
+
+# Compatibility entry point for old callbacks: never bulk-answer a new queue.
+td_resolve_unanswered_effect = { td_reconcile_response_queue_effect = yes }
+
+td_choose_ignore_effect = {
+    save_scope_as = td_respondent
+    if = {
+        limit = { td_response_pending_trigger = yes td_response_choice_phase_trigger = yes }
+        td_load_campaign_effect = yes
+        scope:td_target = {
+            remove_list_variable = { name = td_pending target = scope:td_respondent }
+            add_to_variable_list = { name = td_neutral target = scope:td_respondent }
+        }
+        td_finish_departure_effect = yes
+    }
+}
+
+td_join_core_effect = {
+    save_scope_as = td_respondent
+    save_scope_value_as = { name = td_join_succeeded value = 0 }
+    clear_saved_scope = td_join_primary
+    clear_saved_scope = td_previous_liege
+    if = {
+        limit = { td_response_pending_trigger = yes }
+        td_load_campaign_effect = yes
+        if = {
+            limit = { td_can_join_trigger = yes }
+            primary_title = { save_scope_as = td_join_primary }
+            liege ?= { save_scope_as = td_previous_liege }
+            scope:td_target = {
+                remove_list_variable = { name = td_pending target = scope:td_respondent }
+                add_to_variable_list = { name = td_joined target = scope:td_respondent }
+            }
+            td_capture_join_diplomacy_effect = yes
+            create_title_and_vassal_change = { type = swear_fealty save_scope_as = td_join_change }
+            change_liege = { liege = scope:td_dominant change = scope:td_join_change }
+            resolve_title_and_vassal_change = scope:td_join_change
+            if = {
+                limit = { liege = scope:td_dominant }
+                save_scope_value_as = { name = td_join_succeeded value = 1 }
+            }
+            else = { td_undo_religion_join_effect = yes }
+        }
+    }
+}
+
+td_choose_join_effect = {
+    if = {
+        limit = { td_response_choice_phase_trigger = yes }
+        save_scope_value_as = { name = td_protected_join value = 0 }
+        td_join_core_effect = yes
+        if = { limit = { scope:td_join_succeeded = 1 } td_finish_departure_effect = yes }
+    }
+}
+
+# Shared transaction rollback. Despite the historical name, this also restores
+# an ordinary submission when the native liege change did not take effect.
+# Political state is restored even if a native callback already ended the war;
+# an ended campaign is never revived by recreating its response lists.
+td_undo_religion_join_effect = {
+    # A native liege-change rejection must not cause an AI to retry the same
+    # impossible oath through an unbounded synchronous event recursion.
+    # A failed religious contract after successful fealty only refuses that
+    # request; ordinary fealty remains available on the repeated response.
+    if = {
+        limit = { scope:td_join_succeeded = 0 scope:td_target = { has_variable = td_active } }
+        scope:td_target = { set_variable = { name = td_join_rejected value = yes } }
+    }
+    save_scope_value_as = { name = td_join_succeeded value = 0 }
+    if = {
+        limit = { exists = scope:td_war }
+        scope:td_war = {
+            if = {
+                limit = { any_war_attacker = { this = scope:td_respondent } }
+                remove_participant = scope:td_respondent
+            }
+        }
+    }
+    if = {
+        limit = { liege = scope:td_dominant }
+        create_title_and_vassal_change = { type = granted save_scope_as = td_undo_join }
+        if = {
+            limit = { exists = scope:td_previous_liege }
+            change_liege = { liege = scope:td_previous_liege change = scope:td_undo_join }
+        }
+        else = { becomes_independent = { change = scope:td_undo_join } }
+        resolve_title_and_vassal_change = scope:td_undo_join
+    }
+    if = {
+        limit = { scope:td_target = { has_variable = td_active } }
+        scope:td_target = {
+            remove_list_variable = { name = td_joined target = scope:td_respondent }
+            add_to_variable_list = { name = td_pending target = scope:td_respondent }
+            remove_variable = td_religion_pending
+            if = {
+                limit = { scope:td_protected_join = 1 }
+                add_to_variable_list = { name = td_refused target = scope:td_respondent }
+            }
+        }
+        if = {
+            limit = {
+                exists = scope:td_war
+                NOT = { is_participant_in_war = scope:td_war }
+            }
+            scope:td_war = { add_defender = scope:td_respondent }
+        }
+        td_capture_response_turn_effect = yes
+        trigger_event = title_domination.0002
+    }
+}
+
+td_request_religion_effect = {
+    save_scope_as = td_respondent
+    if = {
+        limit = { td_response_pending_trigger = yes }
+        # A response window can remain open while the dominant is inherited.
+        td_load_campaign_effect = yes
+        if = {
+            limit = { td_can_request_religion_trigger = yes td_response_choice_phase_trigger = yes }
+            save_scope_as = td_requester
+            scope:td_target = { set_variable = { name = td_religion_pending value = scope:td_requester } }
+            td_capture_response_turn_effect = yes
+            scope:td_dominant = { trigger_event = title_domination.0003 }
+        }
+    }
+}
+
+td_grant_religion_effect = {
+    scope:td_requester = {
+        save_scope_as = td_respondent
+        if = {
+            limit = { td_response_pending_trigger = yes td_can_request_religion_trigger = yes td_religion_request_pending_trigger = yes }
+            save_scope_value_as = { name = td_protected_join value = 1 }
+            td_join_core_effect = yes
+            if = {
+                limit = { scope:td_join_succeeded = 1 }
+                if = {
+                    limit = {
+                        NOT = { vassal_contract_obligation_level:religious_rights = 1 }
+                        vassal_contract_obligation_level_can_be_increased = religious_rights
+                    }
+                    vassal_contract_set_obligation_level = { type = religious_rights level = 1 }
+                }
+                # A setter attempt is not proof of the promised contract right.
+                if = {
+                    limit = {
+                        liege = scope:td_dominant
+                        vassal_contract_has_flag = religiously_protected
+                        vassal_contract_obligation_level:religious_rights = 1
+                    }
+                    td_finish_departure_effect = yes
+                }
+                else = { td_undo_religion_join_effect = yes }
+            }
+        }
+    }
+}
+
+td_refuse_religion_effect = {
+    scope:td_requester = {
+        save_scope_as = td_respondent
+        if = {
+            limit = { td_response_pending_trigger = yes td_religion_request_pending_trigger = yes }
+            scope:td_target = {
+                add_to_variable_list = { name = td_refused target = scope:td_requester }
+                remove_variable = td_religion_pending
+            }
+            td_capture_response_turn_effect = yes
+            trigger_event = title_domination.0002
+        }
+    }
+}
+
+# This never uses the ordinary conquest/vassalize/de-jure transfer effects.
+td_victory_effect = {
+    td_clear_started_cooldown_effect = yes
+    td_clear_campaign_effect = yes
+}
+
+td_rollback_effect = {
+    every_in_list = { list = td_release_rulers remove_from_list = td_release_rulers }
+    scope:td_target = {
+        set_variable = { name = td_rolling_back value = yes }
+        every_in_list = {
+            variable = td_joined
+            if = {
+                limit = {
+                    is_alive = yes
+                    exists = scope:td_dominant
+                    is_vassal_or_below_of = scope:td_dominant
+                    NOT = { is_in_list = td_release_rulers }
+                }
+                add_to_list = td_release_rulers
+            }
+        }
+    }
+    create_title_and_vassal_change = { type = granted save_scope_as = td_release_change }
+    every_in_list = { list = td_release_rulers becomes_independent = { change = scope:td_release_change } }
+    resolve_title_and_vassal_change = scope:td_release_change
+    if = {
+        limit = {
+            exists = scope:td_target.holder
+            NOT = { scope:td_target = { has_variable = td_title_destroying } }
+        }
+        scope:td_target.holder = { destroy_title = scope:td_target }
+    }
+}
+
+# A native outer title transaction can overwrite a nested independence change.
+# Keep both locks and role records until its next tick, then cancel outside it.
+# A title-scoped on-action survives the death of its recorded character owner.
+td_queue_title_cancellation_effect = {
+    if = {
+        limit = {
+            scope:td_target = { has_variable = td_active NOT = { has_variable = td_rolling_back } }
+        }
+        if = {
+            limit = {
+                scope:td_target = {
+                    OR = {
+                        exists = var:td_war
+                        any_in_list = { variable = td_joined always = yes }
+                    }
+                }
+            }
+            scope:td_target = {
+                set_variable = { name = td_cancel_pending value = yes }
+                # Existing CB and title hooks already skip this recursion guard.
+                set_variable = { name = td_rolling_back value = yes }
+            }
+            td_capture_event_generation_effect = yes
+            scope:td_target = {
+                trigger_event = { on_action = td_finish_queued_title_cancellation delayed = yes }
+            }
+        }
+        else = { td_cancel_campaign_effect = yes }
+    }
+}
+
+# Current-state helper for the queued on-action and load-time reconciliation.
+# The queued caller separately validates its captured campaign generation.
+td_finish_pending_cancellation_effect = {
+    if = {
+        limit = { scope:td_target = { has_variable = td_active has_variable = td_cancel_pending } }
+        scope:td_target = {
+            remove_variable = td_cancel_pending
+            remove_variable = td_rolling_back
+        }
+        td_cancel_campaign_effect = yes
+    }
+}
+
+# Cancel transfers or interrupted campaigns without a second cost or indemnity.
+# A snapshotted main heir is the only non-war successor eligible for rollback.
+td_cancel_campaign_effect = {
+    if = {
+        limit = {
+            scope:td_target = { has_variable = td_active NOT = { has_variable = td_rolling_back } }
+        }
+        scope:td_target = { set_variable = { name = td_rolling_back value = yes } }
+        clear_saved_scope = td_dominant
+        scope:td_target.var:td_dominant ?= { save_scope_as = td_dominant }
+        if = {
+            limit = {
+                exists = scope:td_target.var:td_war.primary_attacker
+                scope:td_target.var:td_war.primary_attacker = { is_alive = yes }
+            }
+            scope:td_target.var:td_war.primary_attacker = { save_scope_as = td_dominant }
+        }
+        else_if = {
+            limit = {
+                exists = scope:td_target.var:td_dominant
+                scope:td_target.var:td_dominant ?= { is_alive = no }
+                exists = scope:td_target.var:td_expected_heir
+                scope:td_target.var:td_expected_heir = { is_alive = yes }
+            }
+            scope:td_target.var:td_expected_heir = { save_scope_as = td_dominant }
+        }
+        # Only a refunded technical failure waives the initiation cooldown.
+        # Ordinary invalidation/title transfer and defeat retain the timer.
+        if = {
+            limit = { scope:td_target = { has_variable = td_formation_refunded } }
+            td_clear_started_cooldown_effect = yes
+        }
+        # Native invalidation ends the actual war without a defeated-party
+        # settlement (vanilla war_event.2002). White peace is forbidden by this CB.
+        # Outcome callbacks skip rolling-back campaigns, preventing recursion.
+        scope:td_target.var:td_war ?= { end_war = invalidated }
+        td_rollback_effect = yes
+        td_clear_campaign_effect = yes
+    }
+}
+
+td_defeat_effect = {
+    every_in_list = { list = td_payees remove_from_list = td_payees }
+    # Equal shares, not generated gold: the losing ruler is charged the exact pool.
+    scope:td_target = {
+        every_in_list = {
+            variable = td_fighters
+            if = {
+                limit = {
+                    is_alive = yes
+                    exists = scope:td_target.var:td_war
+                    is_defender_in_war = scope:td_target.var:td_war
+                    NOT = { is_in_list = td_payees }
+                }
+                add_to_list = td_payees
+            }
+        }
+    }
+    save_scope_value_as = { name = td_payee_count value = { value = 0 every_in_list = { list = td_payees add = 1 } } }
+    if = {
+        limit = { scope:td_payee_count > 0 }
+        save_scope_value_as = { name = td_indemnity value = scope:td_target.var:td_initial_gold_cost }
+        scope:td_dominant = { remove_short_term_gold = scope:td_indemnity }
+        every_in_list = { list = td_payees add_gold = { value = scope:td_indemnity divide = scope:td_payee_count } }
+    }
+    td_rollback_effect = yes
+    td_clear_campaign_effect = yes
+}
+
+td_clear_campaign_effect = {
+    td_clear_diplomacy_effect = yes
+    remove_list_global_variable = { name = td_active_campaigns target = scope:td_target }
+    scope:td_target.var:td_dominant ?= { td_clear_exact_campaign_lock_effect = yes }
+    scope:td_dominant ?= { td_clear_exact_campaign_lock_effect = yes }
+    scope:td_target.holder ?= { td_clear_exact_campaign_lock_effect = yes }
+    scope:td_target = {
+        every_in_list = { variable = td_lock_holders td_clear_exact_campaign_lock_effect = yes }
+        every_in_list = { variable = td_fighters td_forget_campaign_succession_snapshot_effect = yes }
+        every_in_list = { variable = td_joined td_forget_campaign_succession_snapshot_effect = yes }
+        remove_variable = td_active
+        remove_variable = td_gathering
+        remove_variable = td_response_window
+        remove_variable = td_response_queue_version
+        remove_variable = td_response_turn
+        remove_variable = td_current_respondent
+        remove_variable = td_religion_pending
+        remove_variable = td_dispatch_in_progress
+        remove_variable = td_queue_recovery_pending
+        remove_variable = td_queue_authority_changed
+        remove_variable = td_join_rejected
+        remove_variable = td_dominant
+        remove_variable = td_war
+        remove_variable = td_expected_heir
+        remove_variable = td_rolling_back
+        remove_variable = td_cancel_pending
+        remove_variable = td_title_destroying
+        remove_variable = td_conflict_choice_pending
+        remove_variable = td_conflict_response_window
+        remove_variable = td_conflict_response_until
+        remove_variable = td_waiting_coalition
+        remove_variable = td_wait_deadline
+        remove_variable = td_wait_until
+        remove_variable = td_poll_serial
+        remove_variable = td_formation_refunded
+        clear_variable_list = td_deferred_support
+        remove_variable = td_original_primary
+        remove_variable = td_initial_gold_cost
+        remove_variable = td_initial_prestige_cost
+        remove_variable = td_cooldown_owner
+        clear_variable_list = td_lock_holders
+        clear_variable_list = td_targets
+        clear_variable_list = td_pending
+        clear_variable_list = td_fighters
+        clear_variable_list = td_joined
+        clear_variable_list = td_neutral
+        clear_variable_list = td_refused
+    }
+}
+
+# Current character has a death snapshot shared by their active campaigns.
+# Closing one campaign must not erase the anchors needed by another one.
+td_forget_campaign_succession_snapshot_effect = {
+    # Completed deaths no longer support character variables. During the native
+    # inheritance hook the separate snapshot-transfer effect still runs normally.
+    if = {
+        limit = { is_alive = yes }
+        if = {
+            limit = { has_variable = td_succession_primary }
+            remove_list_variable = { name = td_succession_campaigns target = scope:td_target }
+            if = {
+                limit = { NOT = { any_in_list = { variable = td_succession_campaigns always = yes } } }
+                td_clear_succession_snapshot_effect = yes
+            }
+        }
+    }
+}
+
+td_clear_succession_snapshot_effect = {
+    remove_variable = td_succession_primary
+    remove_variable = td_succession_heir
+    remove_variable = td_succession_release_allowed
+    clear_variable_list = td_succession_campaigns
+}
+
+td_clear_exact_campaign_lock_effect = {
+    if = {
+        limit = { is_alive = yes }
+        if = {
+            limit = { has_variable = td_active_title var:td_active_title = scope:td_target }
+            remove_variable = td_active_title
+        }
+    }
+}
+
+# Capture only when scheduling a new event. Loading current campaign authority
+# must not replace an old window's generation token with the latest generation.
+td_capture_event_generation_effect = {
+    save_scope_value_as = { name = td_event_generation value = scope:td_target.var:td_campaign_generation }
+}
+
+# These are the actual event-option boundaries, also testable without clicking
+# UI. Internal state-machine helpers deliberately do not require an event token.
+td_event_choose_fight_effect = {
+    if = { limit = { td_event_response_current_trigger = yes } td_choose_fight_effect = yes }
+    else = { td_event_migrate_response_queue_effect = yes }
+}
+
+td_event_choose_ignore_effect = {
+    if = { limit = { td_event_response_current_trigger = yes } td_choose_ignore_effect = yes }
+    else = { td_event_migrate_response_queue_effect = yes }
+}
+
+td_event_choose_join_effect = {
+    if = { limit = { td_event_response_current_trigger = yes } td_choose_join_effect = yes }
+    else = { td_event_migrate_response_queue_effect = yes }
+}
+
+td_event_request_religion_effect = {
+    if = { limit = { td_event_response_current_trigger = yes } td_request_religion_effect = yes }
+    else = { td_event_migrate_response_queue_effect = yes }
+}
+
+td_event_grant_religion_effect = {
+    if = {
+        limit = { td_event_religion_current_trigger = yes }
+        td_load_campaign_effect = yes
+        td_grant_religion_effect = yes
+    }
+    else = { td_event_migrate_response_queue_effect = yes }
+}
+
+td_event_refuse_religion_effect = {
+    if = {
+        limit = { td_event_religion_current_trigger = yes }
+        td_load_campaign_effect = yes
+        td_refuse_religion_effect = yes
+    }
+    else = { td_event_migrate_response_queue_effect = yes }
+}
+
+# A serialized old .0005 may migrate its own old campaign, but cannot
+# answer or expire any turn in an already initialized same-day queue.
+td_event_resolve_unanswered_effect = { td_event_migrate_response_queue_effect = yes }

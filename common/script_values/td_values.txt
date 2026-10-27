@@ -1,0 +1,114 @@
+﻿# All cost values require scope:td_dominant and scope:td_target. Preview values
+# are live; td_begin_effect locks both prices on the campaign before charging.
+
+td_county_count_value = {
+	value = 0
+	scope:td_target = { every_de_jure_county = { add = 1 } }
+}
+
+# Native realm-to-title distance, grouped into vanilla map-pixel distance
+# bands. The engine supplies the spatial realm calculation; this is not travel
+# time and does not use the character capital as a distance approximation.
+# No distance band blocks player access; it only raises the price.
+td_distance_multiplier_value = {
+	value = 4
+	if = {
+		limit = {
+			scope:td_dominant = {
+				realm_to_title_distance_squared = { target = scope:td_target value <= squared_distance_small }
+			}
+		}
+		value = 1
+	}
+	else_if = {
+		limit = {
+			scope:td_dominant = {
+				realm_to_title_distance_squared = { target = scope:td_target value <= squared_distance_medium }
+			}
+		}
+		value = 1.25
+	}
+	else_if = {
+		limit = {
+			scope:td_dominant = {
+				realm_to_title_distance_squared = { target = scope:td_target value <= squared_distance_large }
+			}
+		}
+		value = 1.5
+	}
+	else_if = {
+		limit = {
+			scope:td_dominant = {
+				realm_to_title_distance_squared = { target = scope:td_target value <= squared_distance_huge }
+			}
+		}
+		value = 2
+	}
+	else_if = {
+		limit = {
+			scope:td_dominant = {
+				realm_to_title_distance_squared = { target = scope:td_target value <= squared_distance_mega }
+			}
+		}
+		value = 3
+	}
+}
+
+td_gold_cost_value = {
+	value = 150
+	if = { limit = { scope:td_target.tier = tier_kingdom } value = 450 }
+	else_if = { limit = { scope:td_target.tier = tier_empire } value = 1200 }
+	else_if = { limit = { scope:td_target.tier >= tier_hegemony } value = 2400 }
+	add = { value = td_county_count_value multiply = 12 }
+	multiply = td_distance_multiplier_value
+}
+
+td_prestige_cost_value = {
+	value = 300
+	if = { limit = { scope:td_target.tier = tier_kingdom } value = 750 }
+	else_if = { limit = { scope:td_target.tier = tier_empire } value = 1800 }
+	else_if = { limit = { scope:td_target.tier >= tier_hegemony } value = 3600 }
+	add = { value = td_county_count_value multiply = 15 }
+	multiply = td_distance_multiplier_value
+}
+
+# Title scope. Mirrors installed create_title_counties_percentage's territorial
+# percentage and legitimacy reductions for AI candidate preference only.
+td_normal_creation_share_value = {
+	value = 0.5
+	if = {
+		limit = { tier >= tier_empire }
+		value = 0.8
+		if = {
+			limit = { scope:td_dominant = { has_legitimacy = yes } }
+			if = { limit = { scope:td_dominant = { has_legitimacy_flag = reduced_title_creation_cost } } subtract = 0.05 }
+			else_if = { limit = { scope:td_dominant = { has_legitimacy_flag = very_reduced_title_creation_cost } } subtract = 0.10 }
+			else_if = { limit = { scope:td_dominant = { has_legitimacy_flag = extra_reduced_title_creation_cost } } subtract = 0.15 }
+		}
+	}
+	else_if = {
+		limit = { scope:td_dominant = { has_legitimacy = yes } }
+		if = { limit = { scope:td_dominant = { has_legitimacy_flag = reduced_title_creation_cost } } subtract = 0.15 }
+		else_if = { limit = { scope:td_dominant = { has_legitimacy_flag = very_reduced_title_creation_cost } } subtract = 0.20 }
+		else_if = { limit = { scope:td_dominant = { has_legitimacy_flag = extra_reduced_title_creation_cost } } subtract = 0.25 }
+	}
+}
+
+# Called only after td_collect_targets_effect has populated td_targets.
+# Allies are counted conservatively per prospective defender: a shared ally can
+# be counted more than once. This can deter AI, never falsely encourage it.
+td_ai_enemy_strength_value = {
+	value = 0
+	every_in_list = {
+		list = td_targets
+		add = current_military_strength
+		every_ally = {
+			limit = { NOT = { this = scope:td_dominant } }
+			add = current_military_strength
+		}
+	}
+}
+
+td_ai_required_strength_value = { value = td_ai_enemy_strength_value multiply = 1.35 }
+td_ai_gold_reserve_value = { value = td_gold_cost_value multiply = 1.25 }
+td_ai_prestige_reserve_value = { value = td_prestige_cost_value multiply = 1.25 }

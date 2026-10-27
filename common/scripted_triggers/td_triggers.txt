@@ -1,0 +1,144 @@
+﻿# Shared inputs: scope:td_dominant = actor, scope:td_target = selected title.
+# The title-window command supplies the exact ordinary-creation availability
+# check. AI's separate territorial filter is deliberately a conservative choice,
+# not a restriction on player targets blocked by another vanilla requirement.
+
+# Keep the title action visible while temporary start restrictions disable it.
+td_actor_visible_trigger = {
+	is_alive = yes
+	is_landed = yes
+	is_ruler = yes
+	is_independent_ruler = yes
+	exists = primary_title
+}
+
+# Initiation only: never use this to validate an already running campaign.
+# The reservation also blocks parallel attempts before the coalition war starts.
+td_actor_eligible_trigger = {
+	td_actor_visible_trigger = yes
+	is_at_war = no
+	trigger_if = {
+		limit = { has_variable = td_domination_cooldown }
+		custom_tooltip = { text = td_cooldown_available_tt always = no }
+	}
+	NOT = { has_variable = td_active_title }
+	NOT = { any_held_title = { has_variable = td_active } }
+}
+
+# Title scope. No government, diplomatic-range or one-rank restriction.
+td_target_eligible_trigger = {
+	tier >= tier_duchy
+	is_landless_type_title = no
+	is_titular = no
+	NOT = { exists = holder }
+	NOT = { has_variable = td_active }
+	any_de_jure_county = { always = yes }
+}
+
+td_can_afford_trigger = {
+	exists = scope:td_target
+	gold >= td_gold_cost_value
+	prestige >= td_prestige_cost_value
+}
+
+# Character scope: the collector resolves an external county holder to its
+# independent top liege. Inside the actor's realm only immediate-liege peers
+# are respondents. Never tear an arbitrary foreign sub-vassal out of a realm.
+td_respondent_trigger = {
+	is_alive = yes
+	is_landed = yes
+	NOR = {
+		this = scope:td_dominant
+		is_liege_or_above_of = scope:td_dominant
+		is_vassal_or_below_of = scope:td_dominant
+	}
+	OR = {
+		AND = {
+			is_independent_ruler = yes
+			NOT = { this = scope:td_dominant.top_liege }
+		}
+		AND = {
+			exists = liege
+			exists = scope:td_dominant.liege
+			liege = scope:td_dominant.liege
+		}
+	}
+}
+
+# Primary-title ranks are evaluated after the disputed title has been created.
+# Existing vassals are excluded by respondent eligibility, so defeat releases
+# only rulers who voluntarily joined this campaign.
+td_can_join_structural_trigger = {
+    td_response_context_trigger = yes
+    exists = primary_title
+    exists = scope:td_target.var:td_dominant.primary_title
+    trigger_if = {
+        limit = { exists = primary_title exists = scope:td_target.var:td_dominant.primary_title }
+        primary_title.tier < scope:td_target.var:td_dominant.primary_title.tier
+    }
+}
+
+td_can_join_trigger = {
+    td_can_join_structural_trigger = yes
+    NOT = { scope:td_target = { has_variable = td_join_rejected } }
+    td_volunteer_parties_compatible_trigger = yes
+}
+
+# Prospective contract groups from vanilla subject_contract_groups.txt:
+# feudal_vassal, clan_vassal, mandala_vassal, japan_feudal_vassal.
+# There is no documented prospective has_subject_contract_option trigger.
+# After joining, core effects must also validate the actual religious_rights
+# obligation before promising/granting religious protection.
+td_can_request_religion_structural_trigger = {
+	td_can_join_structural_trigger = yes
+	faith != scope:td_target.var:td_dominant.faith
+	OR = {
+		government_has_flag = government_is_feudal
+		government_has_flag = government_is_clan
+		government_has_flag = government_is_mandala
+		government_has_flag = government_is_japan_feudal
+	}
+	OR = {
+		scope:td_target.var:td_dominant = {
+			NOR = {
+				rite = { rite_has_tenet = tenet_tax_nonbelievers }
+				faith = { has_doctrine = special_doctrine_jizya }
+			}
+		}
+		AND = {
+			vassal_contract_has_flag = religiously_protected
+			NOT = { vassal_contract_has_flag = vassal_contract_cannot_revoke_titles }
+		}
+	}
+}
+
+td_can_request_religion_trigger = {
+    td_can_request_religion_structural_trigger = yes
+    NOT = { scope:td_target = { has_variable = td_join_rejected } }
+    td_volunteer_parties_compatible_trigger = yes
+    save_temporary_scope_as = td_religion_candidate
+    NOT = { scope:td_target = { any_in_list = { variable = td_refused this = scope:td_religion_candidate } } }
+}
+
+# AI preference only. The engine's title-creation command has additional
+# requirements which cannot be queried by a normal scripted trigger.
+td_ai_target_eligible_trigger = {
+	td_target_eligible_trigger = yes
+	NOT = {
+		any_de_jure_county = {
+			percent >= td_normal_creation_share_value
+			holder = {
+				OR = {
+					this = scope:td_dominant
+					is_vassal_or_below_of = scope:td_dominant
+				}
+			}
+		}
+	}
+	scope:td_dominant = {
+		realm_to_title_distance_squared = {
+			target = prev
+			value <= squared_distance_large
+		}
+	}
+}

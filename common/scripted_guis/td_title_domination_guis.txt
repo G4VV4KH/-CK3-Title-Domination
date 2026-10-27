@@ -1,0 +1,38 @@
+﻿# The GUI supplies the player as root and the selected title as both scopes.
+# The alias lets is_shown/is_valid share the same target triggers as the AI.
+td_title_domination_gui = {
+	scope = character
+	saved_scopes = { landed_title td_target td_dominant }
+
+	is_shown = {
+		exists = scope:landed_title
+		exists = scope:td_target
+		td_actor_visible_trigger = yes
+		scope:td_target = { td_target_eligible_trigger = yes }
+	}
+
+	# Keep the action visible, but require both resources before opening preview.
+	# The event's begin option rechecks and charges the final price.
+	is_valid = {
+		exists = scope:landed_title
+		exists = scope:td_target
+		td_actor_eligible_trigger = yes
+		scope:td_target = { td_target_eligible_trigger = yes }
+		td_can_afford_trigger = yes
+	}
+
+	effect = {
+		if = {
+			limit = {
+				exists = scope:landed_title
+				exists = scope:td_target
+				td_actor_eligible_trigger = yes
+				scope:td_target = { td_target_eligible_trigger = yes }
+				td_can_afford_trigger = yes
+			}
+			save_scope_as = td_dominant
+			scope:landed_title = { save_scope_as = td_target }
+			td_open_preview_effect = yes
+		}
+	}
+}

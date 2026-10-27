@@ -1,0 +1,182 @@
+﻿# A title holder is not automatically its campaign's dominant. Authority follows
+# the recorded actor, a verified main heir, or the native war's main attacker.
+on_game_start_after_lobby = { on_actions = { td_reconcile_active_campaigns } }
+yearly_global_pulse = { on_actions = { td_reconcile_active_campaigns } }
+on_death = { on_actions = { td_snapshot_dominant_succession } }
+on_title_gain_inheritance = { on_actions = { td_inherit_campaign_title } }
+on_title_gain = { on_actions = { td_cancel_transferred_campaign_title } }
+on_title_destroyed = { on_actions = { td_cancel_destroyed_campaign_title } }
+
+td_reconcile_active_campaigns = {
+    effect = {
+        # Cleanup mutates the global registry; iterate a bounded snapshot instead.
+        every_in_list = { list = td_campaigns_to_reconcile remove_from_list = td_campaigns_to_reconcile }
+        every_in_global_list = { variable = td_active_campaigns add_to_list = td_campaigns_to_reconcile }
+        every_in_list = {
+            list = td_campaigns_to_reconcile
+            save_scope_as = td_target
+            if = {
+                limit = { has_variable = td_active }
+                td_load_campaign_effect = yes
+                if = {
+                    limit = { has_variable = td_cancel_pending }
+                    # A saved pending callback resumes outside any title transaction.
+                    td_finish_pending_cancellation_effect = yes
+                }
+                else_if = {
+                    limit = {
+                        td_campaign_active_trigger = yes
+                        OR = {
+                            has_variable = td_waiting_coalition
+                            has_variable = td_conflict_choice_pending
+                            any_in_list = { variable = td_deferred_support always = yes }
+                        }
+                    }
+                    td_migrate_legacy_commitment_effect = yes
+                }
+                else_if = {
+                    limit = { td_campaign_active_trigger = yes has_variable = td_gathering }
+                    td_reconcile_response_queue_effect = yes
+                }
+                else_if = {
+                    limit = {
+                        td_campaign_active_trigger = yes
+                        exists = var:td_war.primary_attacker
+                    }
+                    # td_load_campaign_effect already refreshed the exact lock.
+                }
+                else = { td_cancel_campaign_effect = yes }
+            }
+            else = { remove_list_global_variable = { name = td_active_campaigns target = scope:td_target } }
+        }
+    }
+}
+
+# on_death executes before native inheritance. Snapshot only this actor's real
+# registered campaigns; a later arbitrary recipient cannot pose as their heir.
+td_snapshot_dominant_succession = {
+    trigger = {
+        any_in_global_list = {
+            variable = td_active_campaigns
+            has_variable = td_active
+            var:td_dominant = root
+        }
+    }
+    effect = {
+        save_scope_as = td_dying_dominant
+        every_in_global_list = {
+            variable = td_active_campaigns
+            limit = { has_variable = td_active var:td_dominant = scope:td_dying_dominant }
+            remove_variable = td_expected_heir
+            if = {
+                limit = { exists = scope:td_dying_dominant.primary_heir }
+                set_variable = { name = td_expected_heir value = scope:td_dying_dominant.primary_heir }
+            }
+        }
+    }
+}
+
+td_inherit_campaign_title = {
+    trigger = {
+        scope:title = { has_variable = td_active NOT = { has_variable = td_rolling_back } }
+    }
+    effect = {
+        scope:title = { save_scope_as = td_target }
+        if = {
+            limit = {
+                exists = scope:previous_holder
+                scope:previous_holder = scope:td_target.var:td_dominant
+                exists = scope:td_target.var:td_expected_heir
+                scope:td_target.var:td_expected_heir = root
+                scope:td_target.holder = root
+                OR = {
+                    NOT = { has_variable = td_active_title }
+                    var:td_active_title = scope:td_target
+                }
+            }
+            scope:previous_holder = { td_clear_exact_campaign_lock_effect = yes }
+            save_scope_as = td_dominant
+            scope:td_target = {
+                set_variable = { name = td_dominant value = scope:td_dominant }
+                remove_variable = td_expected_heir
+            }
+            td_register_campaign_actor_effect = yes
+            if = {
+                limit = {
+                    scope:td_target = {
+                        OR = {
+                            has_variable = td_waiting_coalition
+                            has_variable = td_conflict_choice_pending
+                            any_in_list = { variable = td_deferred_support always = yes }
+                        }
+                    }
+                }
+                # Inheritance is an outer title transaction: defer migration's
+                # rollback until its commit, just like other title cancellation.
+                td_capture_event_generation_effect = yes
+                scope:td_target = { trigger_event = { on_action = td_poll_campaign_commitments delayed = yes } }
+            }
+            else_if = {
+                limit = { scope:td_target = { has_variable = td_gathering } }
+                # An old protection window belongs to the deceased ruler.
+                # Resume only after native inheritance has committed.
+                scope:td_target = { set_variable = { name = td_queue_authority_changed value = yes } }
+                td_queue_response_recovery_effect = yes
+            }
+        }
+        else = { td_queue_title_cancellation_effect = yes }
+    }
+}
+
+# Native title on-actions expose transfer_type. Inheritance is checked by the
+# stricter hook above; initial creation retains the recorded actor and is allowed.
+td_cancel_transferred_campaign_title = {
+    trigger = {
+        scope:title = {
+            has_variable = td_active
+            NOT = { has_variable = td_rolling_back }
+            NOT = { holder = var:td_dominant }
+        }
+        scope:transfer_type != flag:inheritance
+    }
+    effect = {
+        scope:title = { save_scope_as = td_target }
+        td_queue_title_cancellation_effect = yes
+    }
+}
+
+td_cancel_destroyed_campaign_title = {
+    trigger = {
+        scope:landed_title = { has_variable = td_active NOT = { has_variable = td_rolling_back } }
+    }
+    effect = {
+        scope:landed_title = {
+            save_scope_as = td_target
+            # The outer native operation is already destroying this title.
+            set_variable = { name = td_title_destroying value = yes }
+        }
+        td_queue_title_cancellation_effect = yes
+    }
+}
+
+# Native trigger_event delayed=yes queues this after the outer title transaction.
+# A stale saved callback cannot cancel a later campaign for the same title.
+td_finish_queued_title_cancellation = {
+    trigger = {
+        exists = scope:td_target
+        exists = scope:td_event_generation
+        scope:td_target = {
+            has_variable = td_active
+            has_variable = td_cancel_pending
+            has_variable = td_campaign_generation
+        }
+        trigger_if = {
+            limit = {
+                exists = scope:td_event_generation
+                scope:td_target = { has_variable = td_campaign_generation }
+            }
+            scope:td_event_generation = scope:td_target.var:td_campaign_generation
+        }
+    }
+    effect = { td_finish_pending_cancellation_effect = yes }
+}

@@ -1,0 +1,29 @@
+﻿# Positive display costs derived from the installed standard attack values.
+td_diplomacy_alliance_prestige_cost_value = {
+    value = attack_ally_prestige_loss
+    multiply = -1
+}
+td_diplomacy_alliance_fame_cost_value = {
+    value = attack_ally_prestige_level_loss
+    multiply = -1
+}
+td_diplomacy_truce_prestige_cost_value = {
+    value = 0
+    if = {
+        limit = { td_diplomacy_truce_penalty_trigger = yes NOT = { has_perk = flexible_truces_perk } }
+        value = break_truce_prestige_loss
+        multiply = -1
+    }
+}
+td_diplomacy_truce_fame_cost_value = {
+    value = 0
+    if = {
+        limit = { td_diplomacy_truce_penalty_trigger = yes NOT = { has_perk = flexible_truces_perk } }
+        value = break_truce_prestige_level_loss
+        multiply = -1
+    }
+}
+td_diplomacy_truce_legitimacy_loss_value = {
+    value = medium_legitimacy_loss
+    multiply = primary_title.tier
+}

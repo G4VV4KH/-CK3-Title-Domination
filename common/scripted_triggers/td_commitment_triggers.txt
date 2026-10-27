@@ -1,0 +1,161 @@
+﻿td_current_respondent_trigger = {
+	is_alive = yes
+	is_landed = yes
+	NOR = {
+		this = scope:td_target.var:td_dominant
+		is_liege_or_above_of = scope:td_target.var:td_dominant
+		is_vassal_or_below_of = scope:td_target.var:td_dominant
+	}
+	OR = {
+		AND = {
+			is_independent_ruler = yes
+			NOT = { this = scope:td_target.var:td_dominant.top_liege }
+		}
+		AND = {
+			exists = liege
+			exists = scope:td_target.var:td_dominant.liege
+			liege = scope:td_target.var:td_dominant.liege
+		}
+	}
+}
+
+# Persistent membership queries also work while an event window is open.
+td_is_ready_fighter_trigger = {
+    td_current_respondent_trigger = yes
+    save_temporary_scope_as = td_membership_character
+    scope:td_target = { any_in_list = { variable = td_fighters this = scope:td_membership_character } }
+}
+
+td_is_ready_attacker_trigger = {
+    is_alive = yes
+    OR = {
+        this = scope:td_target.var:td_dominant
+        AND = {
+            is_vassal_or_below_of = scope:td_target.var:td_dominant
+            save_temporary_scope_as = td_membership_character
+            scope:td_target = { any_in_list = { variable = td_joined this = scope:td_membership_character } }
+        }
+    }
+}
+
+# Every committed fighter and volunteer must fit the same native coalition.
+td_core_parties_compatible_trigger = {
+    scope:td_target.var:td_dominant = {
+        NOR = {
+            any_war_enemy = { td_is_ready_fighter_trigger = yes }
+            any_war_ally = { td_is_ready_fighter_trigger = yes }
+            any_liege_or_above = { td_is_ready_fighter_trigger = yes }
+            any_vassal_or_below = { td_is_ready_fighter_trigger = yes }
+        }
+    }
+    NOT = {
+        scope:td_target = {
+            any_in_list = {
+                variable = td_fighters
+                td_current_respondent_trigger = yes
+                any_war_enemy = { td_is_ready_fighter_trigger = yes }
+            }
+        }
+    }
+}
+
+td_volunteer_parties_compatible_trigger = {
+    NOR = {
+        any_war_enemy = { OR = { td_is_ready_fighter_trigger = yes td_is_ready_attacker_trigger = yes } }
+        any_war_ally = { td_is_ready_fighter_trigger = yes }
+        any_liege_or_above = { td_is_ready_fighter_trigger = yes }
+        any_vassal_or_below = { td_is_ready_fighter_trigger = yes }
+    }
+}
+
+# The same party compatibility rules as the native offer/call-to-war checks,
+# evaluated before any new war exists. Unrelated wars remain permitted.
+# A living landed ruler whose accepted political role changed cannot be omitted
+# by the ready-list filters to manufacture a smaller or uncontested coalition.
+td_committed_roles_current_trigger = {
+    NOT = {
+        scope:td_target = {
+            any_in_list = {
+                variable = td_fighters
+                is_alive = yes
+                is_landed = yes
+                NOT = { td_current_respondent_trigger = yes }
+            }
+        }
+    }
+    NOT = {
+        scope:td_target = {
+            any_in_list = {
+                variable = td_joined
+                is_alive = yes
+                is_landed = yes
+                NOT = { is_vassal_or_below_of = scope:td_target.var:td_dominant }
+            }
+        }
+    }
+}
+
+td_ready_parties_compatible_trigger = {
+    td_committed_roles_current_trigger = yes
+    td_core_parties_compatible_trigger = yes
+    NOT = {
+        any_in_list = { list = td_ready_attackers NOT = { td_volunteer_parties_compatible_trigger = yes } }
+    }
+}
+
+td_ready_parties_joined_trigger = {
+    exists = scope:td_war
+    NOT = { any_in_list = { list = td_ready_attackers NOT = { is_attacker_in_war = scope:td_war } } }
+    NOT = { any_in_list = { list = td_ready_fighters NOT = { is_defender_in_war = scope:td_war } } }
+}
+
+# Read the title's current authority directly, including a legitimate heir.
+# Never shadow an event's permanent td_dominant with a temporary scope.
+td_response_context_trigger = {
+    td_campaign_active_trigger = yes
+    trigger_if = {
+        limit = { exists = scope:td_target.var:td_dominant }
+        td_current_respondent_trigger = yes
+        save_temporary_scope_as = td_response_candidate
+        scope:td_target = {
+            has_variable = td_gathering
+            has_variable = td_response_queue_version
+            exists = var:td_current_respondent
+            trigger_if = {
+                limit = { exists = var:td_current_respondent }
+                var:td_current_respondent = scope:td_response_candidate
+            }
+            NOT = { exists = var:td_war }
+            any_in_list = { variable = td_pending this = scope:td_response_candidate }
+        }
+    }
+    trigger_else = { always = no }
+}
+
+# These are the prospective versions of the native call-to-war constraints.
+# Same-side enemies and opposite-side enemies/allies/hierarchy are incompatible.
+# Unrelated wars, and allies on the intended same side, remain allowed.
+td_response_fighter_military_trigger = {
+    NOR = {
+        any_war_enemy = { OR = { td_is_ready_fighter_trigger = yes td_is_ready_attacker_trigger = yes } }
+        any_war_ally = { td_is_ready_attacker_trigger = yes }
+        any_liege_or_above = { td_is_ready_attacker_trigger = yes }
+        any_vassal_or_below = { td_is_ready_attacker_trigger = yes }
+    }
+}
+
+td_can_fight_trigger = {
+    td_response_context_trigger = yes
+    td_response_fighter_military_trigger = yes
+}
+
+# Only old saved campaigns can contain these retired phase markers.
+td_legacy_commitment_trigger = {
+    scope:td_target = {
+        OR = {
+            has_variable = td_waiting_coalition
+            has_variable = td_conflict_choice_pending
+            any_in_list = { variable = td_deferred_support always = yes }
+        }
+    }
+}

@@ -1,0 +1,253 @@
+﻿namespace = title_domination
+
+title_domination.0001 = {
+    type = character_event
+    title = title_domination.0001.t
+    desc = title_domination.0001.desc
+    theme = war
+    left_portrait = root
+    option = {
+        name = title_domination.0001.begin
+        show_as_unavailable = { always = yes }
+        trigger = {
+            td_actor_eligible_trigger = yes
+            td_can_afford_trigger = yes
+            scope:td_target = { td_target_eligible_trigger = yes }
+        }
+        if = {
+            limit = { exists = scope:td_fc_own_strength }
+            custom_tooltip = td_fc_header_tt
+            custom_tooltip = td_fc_own_tt
+            custom_tooltip = td_fc_support_header_tt
+            if = { limit = { exists = scope:td_fc_support_1 }
+                if = { limit = { scope:td_fc_support_1_conditional = 1 } custom_tooltip = td_fc_support_row_1_conditional_tt }
+                else = { custom_tooltip = td_fc_support_row_1_tt }
+            }
+            if = { limit = { exists = scope:td_fc_support_2 }
+                if = { limit = { scope:td_fc_support_2_conditional = 1 } custom_tooltip = td_fc_support_row_2_conditional_tt }
+                else = { custom_tooltip = td_fc_support_row_2_tt }
+            }
+            if = { limit = { exists = scope:td_fc_support_3 }
+                if = { limit = { scope:td_fc_support_3_conditional = 1 } custom_tooltip = td_fc_support_row_3_conditional_tt }
+                else = { custom_tooltip = td_fc_support_row_3_tt }
+            }
+            if = { limit = { exists = scope:td_fc_support_4 }
+                if = { limit = { scope:td_fc_support_4_conditional = 1 } custom_tooltip = td_fc_support_row_4_conditional_tt }
+                else = { custom_tooltip = td_fc_support_row_4_tt }
+            }
+            if = { limit = { exists = scope:td_fc_support_5 }
+                if = { limit = { scope:td_fc_support_5_conditional = 1 } custom_tooltip = td_fc_support_row_5_conditional_tt }
+                else = { custom_tooltip = td_fc_support_row_5_tt }
+            }
+            if = { limit = { scope:td_fc_support_rest_count > 0 } custom_tooltip = td_fc_support_rest_tt }
+            custom_tooltip = td_fc_fighters_header_tt
+            if = { limit = { exists = scope:td_fc_fighters_1 }
+                custom_tooltip = td_fc_fighters_row_1_tt
+            }
+            if = { limit = { exists = scope:td_fc_fighters_2 }
+                custom_tooltip = td_fc_fighters_row_2_tt
+            }
+            if = { limit = { exists = scope:td_fc_fighters_3 }
+                custom_tooltip = td_fc_fighters_row_3_tt
+            }
+            if = { limit = { exists = scope:td_fc_fighters_4 }
+                custom_tooltip = td_fc_fighters_row_4_tt
+            }
+            if = { limit = { exists = scope:td_fc_fighters_5 }
+                custom_tooltip = td_fc_fighters_row_5_tt
+            }
+            if = { limit = { scope:td_fc_fighters_rest_count > 0 } custom_tooltip = td_fc_fighters_rest_tt }
+            custom_tooltip = td_fc_neutral_header_tt
+            if = { limit = { exists = scope:td_fc_neutral_1 }
+                custom_tooltip = td_fc_neutral_row_1_tt
+            }
+            if = { limit = { exists = scope:td_fc_neutral_2 }
+                custom_tooltip = td_fc_neutral_row_2_tt
+            }
+            if = { limit = { exists = scope:td_fc_neutral_3 }
+                custom_tooltip = td_fc_neutral_row_3_tt
+            }
+            if = { limit = { exists = scope:td_fc_neutral_4 }
+                custom_tooltip = td_fc_neutral_row_4_tt
+            }
+            if = { limit = { exists = scope:td_fc_neutral_5 }
+                custom_tooltip = td_fc_neutral_row_5_tt
+            }
+            if = { limit = { scope:td_fc_neutral_rest_count > 0 } custom_tooltip = td_fc_neutral_rest_tt }
+            if = { limit = { scope:td_fc_conditional_count > 0 } custom_tooltip = td_fc_conditional_tt }
+            if = { limit = { scope:td_fc_fighters_strength > 0 } custom_tooltip = td_fc_ratio_tt }
+            else = { custom_tooltip = td_fc_no_fighters_tt }
+            custom_tooltip = td_fc_caveat_tt
+        }
+        else = {
+            custom_tooltip = td_fc_unavailable_tt
+            ordered_in_list = { list = td_targets order_by = current_military_strength max = 99999 check_range_bounds = no custom_tooltip = td_preview_ruler_tt }
+        }
+        custom_tooltip = td_start_tt
+        custom_tooltip = td_diplomacy_begin_tt
+        hidden_effect_new_object = { td_begin_effect = yes }
+    }
+    option = { name = title_domination.0001.cancel }
+}
+
+title_domination.0002 = {
+    type = character_event
+    title = title_domination.0002.t
+    desc = {
+        desc = title_domination.0002.desc
+        triggered_desc = {
+            trigger = { is_at_war_with = scope:td_dominant }
+            desc = td_oath_current_war_desc
+        }
+        triggered_desc = {
+            trigger = { scope:td_target = { has_variable = td_join_rejected } }
+            desc = td_oath_rejected_desc
+        }
+    }
+    theme = war
+    left_portrait = root
+    right_portrait = scope:td_dominant
+    trigger = {
+        td_event_response_current_trigger = yes
+        td_response_context_trigger = yes
+    }
+    immediate = { td_load_campaign_effect = yes }
+    after = { td_event_continue_queue_effect = yes }
+    on_trigger_fail = { td_event_response_failed_effect = yes }
+    option = {
+        name = title_domination.0002.fight
+        show_as_unavailable = { always = yes }
+        trigger = {
+            custom_tooltip = {
+                text = td_fight_military_available_tt
+                td_event_response_current_trigger = yes
+                td_can_fight_trigger = yes
+            }
+        }
+        custom_tooltip = td_fight_tt
+        custom_tooltip = td_diplomacy_defend_tt
+        hidden_effect_new_object = { td_event_choose_fight_effect = yes }
+        ai_will_select = td_ai_fight_weight_value
+    }
+    option = {
+        name = title_domination.0002.ignore
+        custom_tooltip = td_neutral_tt
+        hidden_effect_new_object = { td_event_choose_ignore_effect = yes }
+        ai_will_select = td_ai_ignore_weight_value
+    }
+    option = {
+        name = title_domination.0002.join
+        show_as_unavailable = { td_can_join_structural_trigger = yes }
+        trigger = {
+            custom_tooltip = {
+                text = td_join_military_available_tt
+                td_event_response_current_trigger = yes
+                td_can_join_trigger = yes
+            }
+        }
+        custom_tooltip = td_join_tt
+        custom_tooltip = td_diplomacy_join_tt
+        if = { limit = { is_at_war_with = scope:td_dominant } custom_tooltip = td_oath_current_war_tt }
+        hidden_effect_new_object = { td_event_choose_join_effect = yes }
+        ai_will_select = td_ai_join_weight_value
+    }
+    option = {
+        name = title_domination.0002.religion
+        show_as_unavailable = {
+            td_can_request_religion_structural_trigger = yes
+            NOT = { scope:td_target = { any_in_list = { variable = td_refused this = root } } }
+        }
+        trigger = {
+            custom_tooltip = {
+                text = td_join_military_available_tt
+                td_event_response_current_trigger = yes
+                td_can_request_religion_trigger = yes
+            }
+        }
+        custom_tooltip = td_religion_tt
+        custom_tooltip = td_diplomacy_join_tt
+        hidden_effect_new_object = { td_event_request_religion_effect = yes }
+        ai_will_select = td_ai_religion_weight_value
+    }
+}
+
+title_domination.0003 = {
+    type = character_event
+    title = title_domination.0003.t
+    desc = title_domination.0003.desc
+    theme = diplomacy
+    left_portrait = root
+    right_portrait = scope:td_requester
+    trigger = {
+        td_event_religion_current_trigger = yes
+        scope:td_target = { any_in_list = { variable = td_pending this = scope:td_requester } }
+    }
+    after = { td_event_continue_queue_effect = yes }
+    on_trigger_fail = { td_event_migrate_response_queue_effect = yes }
+    option = {
+        name = title_domination.0003.grant
+        show_as_unavailable = { scope:td_requester = { td_can_request_religion_structural_trigger = yes } }
+        trigger = {
+            custom_tooltip = {
+                text = td_religion_grant_available_tt
+                td_event_religion_current_trigger = yes
+                scope:td_requester = { td_can_request_religion_trigger = yes }
+            }
+        }
+        custom_tooltip = td_religion_tt
+        hidden_effect_new_object = { td_event_grant_religion_effect = yes }
+        ai_chance = { base = 70 modifier = { add = -60 has_trait = zealous } modifier = { add = 30 has_trait = cynical } }
+    }
+    option = {
+        name = title_domination.0003.refuse
+        hidden_effect_new_object = { td_event_refuse_religion_effect = yes }
+        ai_chance = { base = 30 modifier = { add = 60 has_trait = zealous } }
+    }
+}
+
+# Only serialized old broadcast campaigns use this event; new chains have no timer.
+title_domination.0005 = {
+    type = character_event
+    hidden = yes
+    trigger = { td_event_campaign_current_trigger = yes }
+    immediate = { td_event_resolve_unanswered_effect = yes }
+}
+
+# Retained solely to close a .0006 window serialized by the retired flow.
+# New campaigns never open it and never offer waiting or delayed support.
+title_domination.0006 = {
+    type = character_event
+    title = td_legacy_campaign_title
+    desc = td_legacy_campaign_desc
+    theme = diplomacy
+    left_portrait = root
+    trigger = { always = no }
+    option = {
+        name = td_legacy_campaign_close
+        hidden_effect_new_object = {
+            if = {
+                limit = { td_event_authority_current_trigger = yes }
+                td_migrate_legacy_commitment_effect = yes
+            }
+        }
+    }
+}
+
+# A changed military situation or an exceptional native formation failure.
+title_domination.0007 = {
+    type = character_event
+    title = title_domination.0007.t
+    desc = title_domination.0007.desc
+    theme = diplomacy
+    left_portrait = root
+    option = { name = title_domination.0007.ok }
+}
+
+title_domination.0008 = {
+    type = character_event
+    title = td_legacy_campaign_title
+    desc = td_legacy_campaign_desc
+    theme = diplomacy
+    left_portrait = root
+    option = { name = td_legacy_campaign_close }
+}

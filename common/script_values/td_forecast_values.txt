@@ -1,0 +1,117 @@
+﻿# Shared AI preferences: the same formulas drive real options and the forecast.
+# Availability is still enforced by the existing event triggers.
+# All values are nonnegative; a truce modifier expresses a peace preference,
+# not a claim that defending against an attack breaks a truce.
+td_ai_fight_weight_value = {
+    value = 50
+    if = { limit = { has_trait = brave } add = 50 }
+    if = { limit = { has_trait = ambitious } add = 40 }
+    if = { limit = { has_trait = craven } subtract = 30 }
+    if = { limit = { is_allied_to = scope:td_dominant } subtract = 30 }
+    if = { limit = { td_ai_truce_with_dominant_trigger = yes } subtract = 10 }
+    if = { limit = { td_ai_allied_to_fighter_trigger = yes } add = 20 }
+    min = 0
+}
+td_ai_ignore_weight_value = {
+    value = 30
+    if = { limit = { has_trait = craven } add = 50 }
+    if = { limit = { any_character_war = { NOT = { using_cb = td_domination_cb } } } add = 30 }
+    if = { limit = { td_ai_truce_with_dominant_trigger = yes } add = 10 }
+}
+td_ai_join_weight_value = {
+    value = 10
+    if = { limit = { faith = scope:td_dominant.faith } add = 40 }
+    if = { limit = { has_trait = content } add = 20 }
+    if = { limit = { has_trait = ambitious } subtract = 30 }
+    if = { limit = { opinion = { target = scope:td_dominant value >= 50 } } add = 30 }
+    if = { limit = { is_allied_to = scope:td_dominant } add = 30 }
+    if = { limit = { td_ai_allied_to_fighter_trigger = yes } subtract = 20 }
+    min = 0
+}
+td_ai_religion_weight_value = {
+    value = 25
+    if = { limit = { has_trait = zealous } add = 30 }
+    if = { limit = { has_trait = content } add = 20 }
+    if = { limit = { is_allied_to = scope:td_dominant } add = 30 }
+    if = { limit = { td_ai_allied_to_fighter_trigger = yes } subtract = 20 }
+    min = 0
+}
+
+# Per-candidate forecast weights use prospective rank and local predicted sides.
+td_forecast_fight_weight_value = {
+    value = 0
+    if = { limit = { td_forecast_fight_available_trigger = yes } value = td_ai_fight_weight_value }
+}
+td_forecast_join_weight_value = {
+    value = 0
+    if = { limit = { td_forecast_join_available_trigger = yes } value = td_ai_join_weight_value }
+}
+td_forecast_religion_weight_value = {
+    value = 0
+    if = { limit = { td_forecast_religion_available_trigger = yes } value = td_ai_religion_weight_value }
+}
+
+# Localization reads only the immutable event-scope snapshot, not live troops.
+td_fc_own_strength_value = { value = scope:td_fc_own_strength }
+td_fc_own_share_value = { value = scope:td_fc_own_share }
+td_fc_side_strength_value = { value = scope:td_fc_side_strength }
+td_fc_ratio_value = { value = scope:td_fc_ratio }
+td_fc_conditional_count_value = { value = scope:td_fc_conditional_count }
+td_fc_conditional_strength_value = { value = scope:td_fc_conditional_strength }
+td_fc_support_count_value = { value = scope:td_fc_support_count }
+td_fc_support_strength_value = { value = scope:td_fc_support_strength }
+td_fc_support_rest_count_value = { value = scope:td_fc_support_rest_count }
+td_fc_support_rest_strength_value = { value = scope:td_fc_support_rest_strength }
+td_fc_support_1_strength_value = { value = scope:td_fc_support_1_strength }
+td_fc_support_1_probability_value = { value = scope:td_fc_support_1_probability }
+td_fc_support_1_share_value = { value = scope:td_fc_support_1_share }
+td_fc_support_2_strength_value = { value = scope:td_fc_support_2_strength }
+td_fc_support_2_probability_value = { value = scope:td_fc_support_2_probability }
+td_fc_support_2_share_value = { value = scope:td_fc_support_2_share }
+td_fc_support_3_strength_value = { value = scope:td_fc_support_3_strength }
+td_fc_support_3_probability_value = { value = scope:td_fc_support_3_probability }
+td_fc_support_3_share_value = { value = scope:td_fc_support_3_share }
+td_fc_support_4_strength_value = { value = scope:td_fc_support_4_strength }
+td_fc_support_4_probability_value = { value = scope:td_fc_support_4_probability }
+td_fc_support_4_share_value = { value = scope:td_fc_support_4_share }
+td_fc_support_5_strength_value = { value = scope:td_fc_support_5_strength }
+td_fc_support_5_probability_value = { value = scope:td_fc_support_5_probability }
+td_fc_support_5_share_value = { value = scope:td_fc_support_5_share }
+td_fc_fighters_count_value = { value = scope:td_fc_fighters_count }
+td_fc_fighters_strength_value = { value = scope:td_fc_fighters_strength }
+td_fc_fighters_rest_count_value = { value = scope:td_fc_fighters_rest_count }
+td_fc_fighters_rest_strength_value = { value = scope:td_fc_fighters_rest_strength }
+td_fc_fighters_1_strength_value = { value = scope:td_fc_fighters_1_strength }
+td_fc_fighters_1_probability_value = { value = scope:td_fc_fighters_1_probability }
+td_fc_fighters_1_share_value = { value = scope:td_fc_fighters_1_share }
+td_fc_fighters_2_strength_value = { value = scope:td_fc_fighters_2_strength }
+td_fc_fighters_2_probability_value = { value = scope:td_fc_fighters_2_probability }
+td_fc_fighters_2_share_value = { value = scope:td_fc_fighters_2_share }
+td_fc_fighters_3_strength_value = { value = scope:td_fc_fighters_3_strength }
+td_fc_fighters_3_probability_value = { value = scope:td_fc_fighters_3_probability }
+td_fc_fighters_3_share_value = { value = scope:td_fc_fighters_3_share }
+td_fc_fighters_4_strength_value = { value = scope:td_fc_fighters_4_strength }
+td_fc_fighters_4_probability_value = { value = scope:td_fc_fighters_4_probability }
+td_fc_fighters_4_share_value = { value = scope:td_fc_fighters_4_share }
+td_fc_fighters_5_strength_value = { value = scope:td_fc_fighters_5_strength }
+td_fc_fighters_5_probability_value = { value = scope:td_fc_fighters_5_probability }
+td_fc_fighters_5_share_value = { value = scope:td_fc_fighters_5_share }
+td_fc_neutral_count_value = { value = scope:td_fc_neutral_count }
+td_fc_neutral_strength_value = { value = scope:td_fc_neutral_strength }
+td_fc_neutral_rest_count_value = { value = scope:td_fc_neutral_rest_count }
+td_fc_neutral_rest_strength_value = { value = scope:td_fc_neutral_rest_strength }
+td_fc_neutral_1_strength_value = { value = scope:td_fc_neutral_1_strength }
+td_fc_neutral_1_probability_value = { value = scope:td_fc_neutral_1_probability }
+td_fc_neutral_1_share_value = { value = scope:td_fc_neutral_1_share }
+td_fc_neutral_2_strength_value = { value = scope:td_fc_neutral_2_strength }
+td_fc_neutral_2_probability_value = { value = scope:td_fc_neutral_2_probability }
+td_fc_neutral_2_share_value = { value = scope:td_fc_neutral_2_share }
+td_fc_neutral_3_strength_value = { value = scope:td_fc_neutral_3_strength }
+td_fc_neutral_3_probability_value = { value = scope:td_fc_neutral_3_probability }
+td_fc_neutral_3_share_value = { value = scope:td_fc_neutral_3_share }
+td_fc_neutral_4_strength_value = { value = scope:td_fc_neutral_4_strength }
+td_fc_neutral_4_probability_value = { value = scope:td_fc_neutral_4_probability }
+td_fc_neutral_4_share_value = { value = scope:td_fc_neutral_4_share }
+td_fc_neutral_5_strength_value = { value = scope:td_fc_neutral_5_strength }
+td_fc_neutral_5_probability_value = { value = scope:td_fc_neutral_5_probability }
+td_fc_neutral_5_share_value = { value = scope:td_fc_neutral_5_share }

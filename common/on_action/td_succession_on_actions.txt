@@ -1,0 +1,98 @@
+﻿# on_death runs before succession; title inheritance provides the actual recipient.
+# Only the original primary estate can carry a deceased participant's record.
+# Ordinary gifts and partition cadets cannot acquire campaign entitlements.
+on_death = { on_actions = { td_snapshot_participant_succession } }
+on_title_gain_inheritance = { on_actions = { td_inherit_participant_succession } }
+
+td_snapshot_participant_succession = {
+    trigger = {
+        exists = primary_title
+        exists = primary_heir
+        any_in_global_list = {
+            variable = td_active_campaigns
+            has_variable = td_active
+            OR = {
+                any_in_list = { variable = td_fighters this = root }
+                any_in_list = { variable = td_joined this = root }
+            }
+        }
+    }
+    effect = {
+        save_scope_as = td_succession_deceased
+        td_clear_succession_snapshot_effect = yes
+        set_variable = { name = td_succession_primary value = primary_title }
+        set_variable = { name = td_succession_heir value = primary_heir }
+        # Releasing an already landed outsider would also free their unrelated
+        # realm. An unlanded heir or member of the submitting realm is eligible.
+        if = {
+            limit = {
+                primary_heir = {
+                    OR = {
+                        is_landed = no
+                        is_vassal_or_below_of = scope:td_succession_deceased
+                    }
+                }
+            }
+            set_variable = { name = td_succession_release_allowed value = yes }
+        }
+        every_in_global_list = {
+            variable = td_active_campaigns
+            limit = {
+                has_variable = td_active
+                OR = {
+                    any_in_list = { variable = td_fighters this = scope:td_succession_deceased }
+                    any_in_list = { variable = td_joined this = scope:td_succession_deceased }
+                }
+            }
+            save_scope_as = td_succession_campaign
+            scope:td_succession_deceased = {
+                add_to_variable_list = { name = td_succession_campaigns target = scope:td_succession_campaign }
+            }
+        }
+    }
+}
+
+td_inherit_participant_succession = {
+    trigger = {
+        exists = scope:previous_holder
+        scope:previous_holder = {
+            is_alive = no
+            has_variable = td_succession_primary
+            has_variable = td_succession_heir
+            var:td_succession_primary = scope:title
+            var:td_succession_heir = root
+        }
+    }
+    effect = {
+        save_scope_as = td_succession_successor
+        scope:previous_holder = {
+            save_scope_as = td_succession_deceased
+            every_in_list = {
+                variable = td_succession_campaigns
+                limit = { has_variable = td_active }
+                # Do not infer roles from a title or copy pending/refused state.
+                if = {
+                    limit = { any_in_list = { variable = td_fighters this = scope:td_succession_deceased } }
+                    remove_list_variable = { name = td_fighters target = scope:td_succession_deceased }
+                    if = {
+                        limit = { NOT = { any_in_list = { variable = td_fighters this = scope:td_succession_successor } } }
+                        add_to_variable_list = { name = td_fighters target = scope:td_succession_successor }
+                    }
+                }
+                if = {
+                    limit = { any_in_list = { variable = td_joined this = scope:td_succession_deceased } }
+                    remove_list_variable = { name = td_joined target = scope:td_succession_deceased }
+                    if = {
+                        limit = {
+                            scope:td_succession_deceased = { has_variable = td_succession_release_allowed }
+                            NOT = { any_in_list = { variable = td_joined this = scope:td_succession_successor } }
+                        }
+                        add_to_variable_list = { name = td_joined target = scope:td_succession_successor }
+                    }
+
+                }
+            }
+            td_clear_succession_snapshot_effect = yes
+        }
+    }
+}

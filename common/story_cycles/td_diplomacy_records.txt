@@ -1,0 +1,28 @@
+﻿# Inert storage: only actual pact pairs are created. No polling or story events.
+# Ownership is only storage lifetime; it does not transfer the recorded offense.
+td_diplomacy_record = {
+    visible = no
+    on_owner_death = {
+        if = {
+            limit = { exists = var:td_pair_victim var:td_pair_victim = { is_alive = yes } }
+            make_story_owner = var:td_pair_victim
+        }
+        else_if = {
+            limit = {
+                exists = var:td_pair_title.var:td_dominant
+                var:td_pair_title.var:td_dominant = { is_alive = yes }
+            }
+            make_story_owner = var:td_pair_title.var:td_dominant
+        }
+        else = { end_story = yes }
+    }
+    on_end = {
+        save_scope_as = td_ending_diplomacy_record
+        if = {
+            limit = { exists = var:td_pair_title }
+            var:td_pair_title = {
+                remove_list_variable = { name = td_diplomacy_pairs target = scope:td_ending_diplomacy_record }
+            }
+        }
+    }
+}

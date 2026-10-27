@@ -1,0 +1,206 @@
+﻿# Dispatch is synchronous: no days delay and no response deadline. The normal
+# single-player event pause holds the date while a human chooses. It is not a
+# lock against manual diplomacy, scripts or multiplayer time advancement.
+td_capture_response_turn_effect = {
+    td_capture_event_generation_effect = yes
+    save_scope_value_as = { name = td_event_response_turn value = scope:td_target.var:td_response_turn }
+}
+
+# Skip only rulers who are no longer eligible respondents. Keep committed roles
+# untouched; the final formation guard remains responsible for changed sides.
+td_prune_response_queue_effect = {
+    every_in_list = { list = td_queue_invalid remove_from_list = td_queue_invalid }
+    scope:td_target = {
+        every_in_list = {
+            variable = td_pending
+            limit = { NOT = { td_current_respondent_trigger = yes } }
+            add_to_list = td_queue_invalid
+        }
+    }
+    every_in_list = {
+        list = td_queue_invalid
+        save_scope_as = td_queue_removed
+        scope:td_target = { remove_list_variable = { name = td_pending target = scope:td_queue_removed } }
+    }
+    if = {
+        limit = {
+            scope:td_target = {
+                exists = var:td_current_respondent
+                NOT = { any_in_list = { variable = td_pending this = scope:td_target.var:td_current_respondent } }
+            }
+        }
+        scope:td_target = {
+            remove_variable = td_current_respondent
+            remove_variable = td_religion_pending
+        }
+    }
+}
+
+# The outer loop owns progression while AI replies synchronously. A child
+# event's after effect sees the busy flag and cannot nest another dispatch loop.
+# A human dialog leaves current set, so the loop stops until its after effect.
+td_pump_response_queue_effect = {
+    if = {
+        limit = { td_queue_gathering_trigger = yes scope:td_target = { NOT = { has_variable = td_dispatch_in_progress } } }
+        td_load_campaign_effect = yes
+        td_prune_response_queue_effect = yes
+        scope:td_target = { set_variable = { name = td_dispatch_in_progress value = yes } }
+        # A terminal reply consumes one pending ruler. Bound the pump by the
+        # actual set size, rather than the engine default of 1,000 iterations.
+        save_scope_value_as = { name = td_queue_passes value = { value = 0 scope:td_target = { every_in_list = { variable = td_pending add = 1 } } } }
+        while = {
+            count = scope:td_queue_passes
+            limit = {
+                td_queue_gathering_trigger = yes
+                scope:td_target = {
+                    NOT = { exists = var:td_current_respondent }
+                    any_in_list = { variable = td_pending always = yes }
+                }
+            }
+            td_prune_response_queue_effect = yes
+            if = {
+            limit = { scope:td_target = { any_in_list = { variable = td_pending always = yes } } }
+            scope:td_target = {
+                ordered_in_list = {
+                    variable = td_pending
+                    order_by = current_military_strength
+                    max = 1
+                    save_scope_as = td_queue_next
+                }
+                change_variable = { name = td_response_turn add = 1 }
+                set_variable = { name = td_current_respondent value = scope:td_queue_next }
+                remove_variable = td_religion_pending
+                remove_variable = td_join_rejected
+            }
+            td_capture_response_turn_effect = yes
+            # All authoritative state is committed before calling the child.
+            scope:td_target.var:td_current_respondent = { trigger_event = title_domination.0002 }
+            }
+        }
+        scope:td_target = { remove_variable = td_dispatch_in_progress }
+        if = {
+            limit = {
+                td_queue_gathering_trigger = yes
+                scope:td_target = { NOT = { exists = var:td_current_respondent } NOT = { any_in_list = { variable = td_pending always = yes } } }
+            }
+            td_load_campaign_effect = yes
+            scope:td_dominant = { td_maybe_start_war_effect = yes }
+        }
+    }
+}
+
+# Terminal choices remove pending first. Negotiation and a rejected contract
+# keep the current turn; only a verified terminal outcome can release this slot.
+td_finish_response_turn_effect = {
+    if = {
+        limit = {
+            td_queue_gathering_trigger = yes
+            scope:td_target = {
+                exists = var:td_current_respondent
+                trigger_if = { limit = { exists = var:td_current_respondent exists = scope:td_respondent } var:td_current_respondent = scope:td_respondent }
+                NOT = { any_in_list = { variable = td_pending this = scope:td_respondent } }
+            }
+        }
+        scope:td_target = {
+            remove_variable = td_current_respondent
+            remove_variable = td_religion_pending
+        }
+    }
+}
+
+td_event_continue_queue_effect = {
+    if = { limit = { td_event_queue_current_trigger = yes } td_pump_response_queue_effect = yes }
+}
+
+# Old broadcast saves keep costs and accepted roles. Bump only their generation
+# so their old response/protection windows cannot answer the new first turn.
+td_migrate_response_queue_effect = {
+    if = {
+        limit = {
+            td_campaign_active_trigger = yes
+            scope:td_target = { has_variable = td_gathering NOT = { has_variable = td_response_queue_version } }
+        }
+        scope:td_target = {
+            change_variable = { name = td_campaign_generation add = 1 }
+            set_variable = { name = td_response_queue_version value = 1 }
+            set_variable = { name = td_response_turn value = 0 }
+            remove_variable = td_response_window
+            remove_variable = td_current_respondent
+            remove_variable = td_religion_pending
+            remove_variable = td_dispatch_in_progress
+            remove_variable = td_queue_recovery_pending
+            remove_variable = td_queue_authority_changed
+            remove_variable = td_join_rejected
+        }
+        td_pump_response_queue_effect = yes
+    }
+}
+
+# Safe Close/Ignore/Refuse on an already-open old window can start migration.
+# It never converts that old click into an answer for the strongest new ruler.
+td_event_migrate_response_queue_effect = {
+    if = { limit = { td_legacy_response_event_trigger = yes } td_migrate_response_queue_effect = yes }
+}
+
+td_reconcile_response_queue_effect = {
+    if = {
+        limit = { td_campaign_active_trigger = yes scope:td_target = { has_variable = td_gathering } }
+        if = { limit = { scope:td_target = { NOT = { has_variable = td_response_queue_version } } } td_migrate_response_queue_effect = yes }
+        else = { td_pump_response_queue_effect = yes }
+    }
+}
+
+# A failed stale event cannot touch a later turn. If this exact current recipient
+# actually became ineligible, prune it and continue; never manufacture an answer.
+td_event_response_failed_effect = {
+    if = { limit = { td_legacy_response_event_trigger = yes } td_migrate_response_queue_effect = yes }
+    else_if = {
+        limit = {
+            td_event_queue_current_trigger = yes
+            exists = scope:td_target.var:td_current_respondent
+            trigger_if = { limit = { exists = scope:td_target.var:td_current_respondent } this = scope:td_target.var:td_current_respondent }
+            NOT = { td_current_respondent_trigger = yes }
+        }
+        td_prune_response_queue_effect = yes
+        td_pump_response_queue_effect = yes
+    }
+}
+
+# Exceptional inheritance recovery runs after the outer native transaction.
+# Normal response/negotiation chains never use a delayed callback.
+td_redispatch_current_response_effect = {
+    if = {
+        limit = { td_queue_gathering_trigger = yes }
+        td_load_campaign_effect = yes
+        td_prune_response_queue_effect = yes
+        if = {
+            limit = { exists = scope:td_target.var:td_current_respondent }
+            td_capture_response_turn_effect = yes
+            if = {
+                limit = { exists = scope:td_target.var:td_religion_pending }
+                scope:td_target.var:td_current_respondent = { save_scope_as = td_requester }
+                scope:td_dominant = { trigger_event = title_domination.0003 }
+            }
+            else = { scope:td_target.var:td_current_respondent = { trigger_event = title_domination.0002 } }
+        }
+        else = { td_pump_response_queue_effect = yes }
+    }
+}
+
+# Only exceptional external title/death transactions use this next-tick hook.
+# Normal responses, including negotiations, never wait for a tick or a date.
+td_queue_response_recovery_effect = {
+    if = {
+        limit = {
+            td_campaign_active_trigger = yes
+            scope:td_target = { has_variable = td_gathering NOT = { has_variable = td_queue_recovery_pending } }
+        }
+        scope:td_target = { set_variable = { name = td_queue_recovery_pending value = yes } }
+        td_capture_event_generation_effect = yes
+        if = {
+            limit = { scope:td_target = { has_variable = td_response_turn } }
+            save_scope_value_as = { name = td_event_response_turn value = scope:td_target.var:td_response_turn }
+        }
+        scope:td_target = { trigger_event = { on_action = td_recover_response_queue delayed = yes } }
+    }
+}

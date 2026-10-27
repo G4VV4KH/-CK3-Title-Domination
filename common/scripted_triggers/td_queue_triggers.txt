@@ -1,0 +1,66 @@
+﻿# A campaign has one current respondent. Tokens also distinguish repeated
+# dialogs within the same campaign; an older open window cannot answer next.
+td_queue_gathering_trigger = {
+    td_campaign_active_trigger = yes
+    scope:td_target = { has_variable = td_gathering has_variable = td_response_queue_version }
+}
+
+td_response_choice_phase_trigger = {
+    scope:td_target = { NOT = { has_variable = td_religion_pending } }
+}
+
+td_event_queue_current_trigger = {
+    td_event_campaign_current_trigger = yes
+    td_queue_gathering_trigger = yes
+    exists = scope:td_event_response_turn
+    scope:td_target = { has_variable = td_response_turn }
+    trigger_if = {
+        limit = { exists = scope:td_event_response_turn scope:td_target = { has_variable = td_response_turn } }
+        scope:td_event_response_turn = scope:td_target.var:td_response_turn
+    }
+}
+
+td_event_response_current_trigger = {
+    td_event_queue_current_trigger = yes
+    exists = scope:td_target.var:td_current_respondent
+    trigger_if = {
+        limit = { exists = scope:td_target.var:td_current_respondent }
+        this = scope:td_target.var:td_current_respondent
+    }
+    td_response_choice_phase_trigger = yes
+}
+
+td_event_religion_current_trigger = {
+    td_event_queue_current_trigger = yes
+    trigger_if = {
+        limit = { exists = scope:td_target.var:td_dominant }
+        this = scope:td_target.var:td_dominant
+    }
+    exists = scope:td_requester
+    exists = scope:td_target.var:td_current_respondent
+    exists = scope:td_target.var:td_religion_pending
+    trigger_if = {
+        limit = { exists = scope:td_requester exists = scope:td_target.var:td_current_respondent exists = scope:td_target.var:td_religion_pending }
+        scope:td_requester = scope:td_target.var:td_current_respondent
+        scope:td_requester = scope:td_target.var:td_religion_pending
+    }
+}
+
+td_legacy_response_event_trigger = {
+    td_event_campaign_current_trigger = yes
+    scope:td_target = {
+        has_variable = td_gathering
+        NOT = { has_variable = td_response_queue_version }
+    }
+}
+
+# Raw current-state grant/refusal helpers share the same phase check, without
+# requiring a UI event token. Event boundaries separately validate that token.
+td_religion_request_pending_trigger = {
+    exists = scope:td_requester
+    exists = scope:td_target.var:td_religion_pending
+    trigger_if = {
+        limit = { exists = scope:td_requester exists = scope:td_target.var:td_religion_pending }
+        scope:td_target.var:td_religion_pending = scope:td_requester
+    }
+}

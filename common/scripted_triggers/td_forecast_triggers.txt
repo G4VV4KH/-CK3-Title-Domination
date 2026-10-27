@@ -1,0 +1,68 @@
+﻿# Forecast-only prospective legality. No campaign variables or titles are written.
+# scope:td_dominant and scope:td_target are the original preview inputs.
+td_forecast_fight_available_trigger = {
+    td_respondent_trigger = yes
+    NOR = {
+        any_war_enemy = { OR = { is_in_list = td_fc_fighters is_in_list = td_fc_attackers } }
+        any_war_ally = { is_in_list = td_fc_attackers }
+        any_liege_or_above = { is_in_list = td_fc_attackers }
+        any_vassal_or_below = { is_in_list = td_fc_attackers }
+    }
+}
+
+td_forecast_join_available_trigger = {
+    td_respondent_trigger = yes
+    exists = primary_title
+    # Equivalent to candidate tier < max(original primary tier, target tier).
+    OR = {
+        primary_title.tier < scope:td_dominant.primary_title.tier
+        primary_title.tier < scope:td_target.tier
+    }
+    NOR = {
+        any_war_enemy = { OR = { is_in_list = td_fc_fighters is_in_list = td_fc_attackers } }
+        any_war_ally = { is_in_list = td_fc_fighters }
+        any_liege_or_above = { is_in_list = td_fc_fighters }
+        any_vassal_or_below = { is_in_list = td_fc_fighters }
+    }
+}
+
+td_forecast_religion_available_trigger = {
+    td_forecast_join_available_trigger = yes
+    faith != scope:td_dominant.faith
+    OR = {
+        government_has_flag = government_is_feudal
+        government_has_flag = government_is_clan
+        government_has_flag = government_is_mandala
+        government_has_flag = government_is_japan_feudal
+    }
+    OR = {
+        scope:td_dominant = {
+            NOR = {
+                rite = { rite_has_tenet = tenet_tax_nonbelievers }
+                faith = { has_doctrine = special_doctrine_jizya }
+            }
+        }
+        AND = {
+            vassal_contract_has_flag = religiously_protected
+            NOT = { vassal_contract_has_flag = vassal_contract_cannot_revoke_titles }
+        }
+    }
+}
+
+# These are diplomatic preferences, never extra availability restrictions.
+# Active campaigns read accepted defenders; a preview reads only its own lists.
+td_ai_allied_to_fighter_trigger = {
+    trigger_if = {
+        limit = { scope:td_target = { has_variable = td_active } }
+        any_ally = { td_is_ready_fighter_trigger = yes }
+    }
+    trigger_else = { any_ally = { is_in_list = td_fc_fighters } }
+}
+
+td_ai_truce_with_dominant_trigger = {
+    save_temporary_scope_as = td_weight_candidate
+    OR = {
+        has_truce = scope:td_dominant
+        scope:td_dominant = { has_truce = scope:td_weight_candidate }
+    }
+}
