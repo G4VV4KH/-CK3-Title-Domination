@@ -1,0 +1,405 @@
+﻿# Enter from the first victory while its native war still exists. No truce is
+# made here. Keep the title, volunteers, campaign generation and actor lock.
+td_offer_subjugation_effect = {
+    if = {
+        limit = {
+            td_campaign_active_trigger = yes
+            scope:td_target = {
+                NOT = { has_variable = td_subjugation_offer }
+                NOT = { has_variable = td_subjugation_phase }
+            }
+        }
+        td_clear_started_cooldown_effect = yes
+        scope:td_target = { clear_variable_list = td_first_phase_fighters }
+        if = {
+            limit = { exists = scope:td_target.var:td_war }
+            scope:td_target.var:td_war = {
+                every_war_defender = {
+                    limit = { is_alive = yes }
+                    scope:td_target = { add_to_variable_list = { name = td_first_phase_fighters target = prev } }
+                }
+            }
+        }
+        scope:td_target = {
+            set_variable = { name = td_subjugation_offer value = yes }
+            remove_variable = td_gathering
+            remove_variable = td_war
+        }
+        # A tooltip evaluation ignores the setter; do not dispatch from it.
+        if = {
+            limit = { scope:td_target = { has_variable = td_subjugation_offer } }
+            clear_saved_scope = td_war
+            td_clear_diplomacy_effect = yes
+            td_reconcile_subjugation_offer_effect = yes
+        }
+    }
+}
+
+# A human can receive the offer during settlement and answer after the native
+# war transaction closes, on the same date. AI chooses its option inline. If
+# the first war still exists for that AI, deliver on the next engine tick so
+# the retiring enemy and war cannot invalidate its peace/coalition checks.
+td_reconcile_subjugation_offer_effect = {
+    if = {
+        limit = {
+            td_subjugation_offer_current_trigger = yes
+            scope:td_target = {
+                NOT = { has_variable = td_subjugation_offer_queued }
+                trigger_if = {
+                    limit = { exists = var:td_subjugation_offer_recipient }
+                    NOT = { var:td_subjugation_offer_recipient = var:td_dominant }
+                }
+            }
+        }
+        scope:td_target = {
+            set_variable = { name = td_subjugation_offer_queued value = yes }
+            remove_variable = td_subjugation_offer_recipient
+        }
+        if = {
+            limit = { scope:td_target = { has_variable = td_subjugation_offer_queued } }
+            td_capture_event_generation_effect = yes
+            if = {
+                limit = {
+                    scope:td_target.var:td_dominant = {
+                        is_ai = yes
+                        any_character_war = {
+                            using_cb = td_domination_cb
+                            primary_attacker = scope:td_target.var:td_dominant
+                            casus_belli = { any_target_title = { this = scope:td_target } }
+                        }
+                    }
+                }
+                scope:td_target = { trigger_event = { on_action = td_open_subjugation_offer delayed = yes } }
+            }
+            else = {
+                scope:td_target = { trigger_event = { on_action = td_open_subjugation_offer } }
+            }
+        }
+    }
+}
+
+# Re-evaluate actual de-jure counties and their external sovereigns. A high-rank
+# sovereign can defend; victory transfers only within the explicit target title.
+td_prepare_subjugation_targets_effect = {
+    scope:td_target = {
+        clear_variable_list = td_fighters
+        clear_variable_list = td_subjugation_counties
+        every_de_jure_county = {
+            limit = {
+                exists = holder
+                holder.top_liege = { td_current_respondent_trigger = yes }
+            }
+            scope:td_target = { add_to_variable_list = { name = td_subjugation_counties target = prev } }
+        }
+        every_de_jure_top_liege = {
+            limit = { td_current_respondent_trigger = yes }
+            save_scope_as = td_subjugation_candidate
+            if = {
+                limit = {
+                    scope:td_target = { NOT = { any_in_list = { variable = td_fighters this = scope:td_subjugation_candidate } } }
+                }
+                scope:td_target = { add_to_variable_list = { name = td_fighters target = scope:td_subjugation_candidate } }
+            }
+        }
+    }
+    td_prepare_parties_effect = yes
+}
+
+# Snapshot exact current opposing parties for the same personal-pact preview as
+# phase one. AI compares its own strength conservatively against the coalition;
+# volunteer armies are not added to a strength value already containing levies.
+td_build_subjugation_preview_effect = {
+    every_in_list = { list = td_targets remove_from_list = td_targets }
+    every_in_list = { list = td_ready_fighters add_to_list = td_targets }
+    td_build_diplomacy_preview_effect = yes
+    save_scope_value_as = { name = td_subjugation_own_strength value = scope:td_dominant.current_military_strength }
+    save_scope_value_as = {
+        name = td_subjugation_enemy_strength
+        value = { value = 0 every_in_list = { list = td_ready_fighters limit = { td_pact_with_attacking_side_trigger = no } add = current_military_strength } }
+    }
+    save_scope_value_as = {
+        name = td_subjugation_safe_strength
+        value = { value = scope:td_subjugation_enemy_strength multiply = 1.5 }
+    }
+}
+
+td_event_start_subjugation_effect = {
+    if = {
+        limit = {
+            td_event_subjugation_offer_current_trigger = yes
+            td_subjugation_initiator_eligible_trigger = yes
+        }
+        td_load_campaign_effect = yes
+        td_prepare_subjugation_targets_effect = yes
+        if = {
+            limit = { NOT = { any_in_list = { list = td_ready_fighters always = yes } } }
+            td_finish_subjugation_campaign_effect = yes
+        }
+        else = {
+            td_clear_diplomacy_effect = yes
+            scope:td_target = {
+                remove_variable = td_subjugation_offer
+                remove_variable = td_subjugation_offer_queued
+                remove_variable = td_subjugation_offer_recipient
+                set_variable = { name = td_subjugation_phase value = yes }
+                # The selected game rule is latched for this campaign. A later
+                # rule change cannot reinterpret already created native wars.
+                if = {
+                    limit = { has_game_rule = td_subjugation_individual }
+                    set_variable = { name = td_individual_phase value = yes }
+                }
+                set_variable = { name = td_gathering value = yes }
+                set_variable = { name = td_response_queue_version value = 1 }
+                # Never reuse a phase-one event token. The normal pump adds one
+                # per respondent; retain its monotonic counter across phases.
+                if = {
+                    limit = { NOT = { has_variable = td_response_turn } }
+                    set_variable = { name = td_response_turn value = 0 }
+                }
+                remove_variable = td_current_respondent
+                remove_variable = td_religion_pending
+                remove_variable = td_dispatch_in_progress
+                remove_variable = td_queue_recovery_pending
+                remove_variable = td_queue_authority_changed
+                remove_variable = td_join_rejected
+                clear_variable_list = td_targets
+                clear_variable_list = td_pending
+                clear_variable_list = td_fighters
+                clear_variable_list = td_neutral
+                clear_variable_list = td_refused
+            }
+            # The committed phase guard prevents dispatch from a tooltip dry
+            # run. Phase-one volunteers remain in td_joined throughout.
+            if = {
+                limit = {
+                    scope:td_target = {
+                        has_variable = td_subjugation_phase
+                        has_variable = td_gathering
+                        NOT = { has_variable = td_subjugation_offer }
+                    }
+                }
+                every_in_list = {
+                    list = td_ready_fighters
+                    save_scope_as = td_subjugation_candidate
+                    scope:td_target = {
+                        add_to_variable_list = { name = td_targets target = scope:td_subjugation_candidate }
+                        add_to_variable_list = { name = td_pending target = scope:td_subjugation_candidate }
+                    }
+                }
+                td_capture_diplomacy_effect = yes
+                td_pump_response_queue_effect = yes
+            }
+        }
+    }
+}
+
+td_event_finish_subjugation_effect = {
+    if = {
+        limit = { td_event_subjugation_offer_current_trigger = yes }
+        td_load_campaign_effect = yes
+        td_add_first_phase_truces_effect = yes
+        td_finish_subjugation_campaign_effect = yes
+    }
+}
+
+# The first war is over: no dead war/casus-belli scope may enter this effect.
+td_add_first_phase_truces_effect = {
+    clear_saved_scope = td_subjugation_original_attacker
+    clear_saved_scope = td_subjugation_original_defender
+    scope:attacker ?= { save_scope_as = td_subjugation_original_attacker }
+    scope:defender ?= { save_scope_as = td_subjugation_original_defender }
+    if = {
+        limit = { exists = scope:td_dominant scope:td_dominant = { is_alive = yes } }
+        scope:td_dominant = { save_scope_as = attacker }
+        scope:td_target = {
+            every_in_list = {
+                variable = td_first_phase_fighters
+                limit = {
+                    is_alive = yes
+                    NOT = { this = scope:td_dominant }
+                    NOT = { is_vassal_or_below_of = scope:td_dominant }
+                    # Actual second-war defenders receive the native result
+                    # truce separately. Preserve first-war outsiders as well.
+                    trigger_if = {
+                        limit = { exists = scope:td_target.var:td_war }
+                        NOT = { is_defender_in_war = scope:td_target.var:td_war }
+                    }
+                }
+                save_scope_as = defender
+                scope:attacker = {
+                    custom_tooltip = {
+                        text = td_settlement_truce_tt
+                        add_truce_one_way = {
+                            character = scope:defender
+                            days = standard_truce_duration_days
+                            override = no
+                            name = td_subjugation_truce_name
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if = { limit = { exists = scope:td_subjugation_original_attacker } scope:td_subjugation_original_attacker = { save_scope_as = attacker } }
+    else = { clear_saved_scope = attacker }
+    if = { limit = { exists = scope:td_subjugation_original_defender } scope:td_subjugation_original_defender = { save_scope_as = defender } }
+    else = { clear_saved_scope = defender }
+}
+
+td_finish_subjugation_campaign_effect = {
+    if = {
+        limit = {
+            td_campaign_active_trigger = yes
+            scope:td_target = {
+                OR = { has_variable = td_subjugation_offer has_variable = td_subjugation_phase }
+                NOT = { exists = var:td_war }
+                NOT = { any_in_list = { variable = td_individual_wars always = yes } }
+                NOT = { has_variable = td_individual_forming }
+            }
+        }
+        td_clear_campaign_effect = yes
+    }
+}
+
+# No resistance is not permission to seize a neutral realm. The shared queue
+# can finish here while retaining every actual voluntary oath and the title.
+td_finish_uncontested_subjugation_effect = { td_finish_subjugation_campaign_effect = yes }
+
+# Defender inheritance and native reinforcements may change real membership
+# after formation. Settle all current native defenders, never a stale person.
+td_refresh_subjugation_defenders_effect = {
+    if = {
+        limit = { exists = scope:td_target.var:td_war }
+        scope:td_target = { clear_variable_list = td_fighters }
+        scope:td_target.var:td_war = {
+            every_war_defender = {
+                limit = { is_alive = yes }
+                scope:td_target = { add_to_variable_list = { name = td_fighters target = prev } }
+            }
+        }
+    }
+}
+
+# Technical/authority cancellation preserves the already won first phase. No
+# second base price exists to refund, and no first-phase indemnity is charged.
+td_cancel_subjugation_effect = {
+    if = {
+        limit = { scope:td_target = { has_variable = td_individual_phase } }
+        td_cancel_individual_campaign_effect = yes
+    }
+    else_if = {
+        limit = {
+            scope:td_target = {
+                has_variable = td_active
+                NOT = { has_variable = td_rolling_back }
+                OR = { has_variable = td_subjugation_offer has_variable = td_subjugation_phase }
+            }
+        }
+        td_load_campaign_effect = yes
+        scope:td_target = { set_variable = { name = td_rolling_back value = yes } }
+        if = {
+            limit = { scope:td_target = { has_variable = td_rolling_back } }
+            td_refresh_subjugation_defenders_effect = yes
+            td_add_first_phase_truces_effect = yes
+            if = {
+                limit = { exists = scope:td_target.var:td_war exists = scope:td_dominant }
+                scope:td_dominant = { save_scope_as = attacker }
+                td_add_settlement_truces_effect = { RESULT = defeat }
+                scope:td_target.var:td_war = { end_war = invalidated }
+            }
+            td_clear_campaign_effect = yes
+        }
+    }
+}
+
+td_abort_subjugation_effect = {
+    if = {
+        limit = {
+            scope:td_target = {
+                has_variable = td_active
+                NOT = { has_variable = td_rolling_back }
+                OR = { has_variable = td_subjugation_offer has_variable = td_subjugation_phase }
+            }
+        }
+        scope:td_target.var:td_dominant ?= { save_scope_as = td_subjugation_aborted_actor }
+        td_cancel_subjugation_effect = yes
+        if = {
+            limit = {
+                scope:td_target = { NOT = { has_variable = td_active } }
+                exists = scope:td_subjugation_aborted_actor
+                scope:td_subjugation_aborted_actor = { is_alive = yes is_ai = no }
+            }
+            scope:td_subjugation_aborted_actor = { trigger_event = title_domination.0101 }
+        }
+    }
+}
+
+td_subjugation_victory_effect = {
+    if = {
+        limit = { td_subjugation_war_current_trigger = yes }
+        scope:td_target = { set_variable = { name = td_rolling_back value = yes } }
+        # Victory creates no truce. This committed flag also prevents native
+        # tooltip dry runs from attempting to resolve an unset transaction.
+        if = {
+            limit = { scope:td_target = { has_variable = td_rolling_back } }
+            scope:td_target.var:td_war = { save_scope_as = td_settlement_war }
+            create_title_and_vassal_change = {
+                type = conquest
+                save_scope_as = td_subjugation_change
+                add_claim_on_loss = yes
+            }
+            scope:td_settlement_war = {
+                every_war_defender = {
+                    limit = { td_subjugation_settlement_defender_trigger = yes }
+                    td_apply_subjugation_defender_outcome_effect = yes
+                }
+            }
+            resolve_title_and_vassal_change = scope:td_subjugation_change
+            td_clear_campaign_effect = yes
+        }
+    }
+}
+
+td_subjugation_defeat_effect = {
+    if = {
+        limit = { td_subjugation_war_current_trigger = yes }
+        scope:td_target = { set_variable = { name = td_rolling_back value = yes } }
+        if = {
+            limit = { scope:td_target = { has_variable = td_rolling_back } }
+            td_refresh_subjugation_defenders_effect = yes
+            td_add_settlement_truces_effect = { RESULT = defeat }
+            td_add_first_phase_truces_effect = yes
+            td_clear_campaign_effect = yes
+        }
+    }
+}
+
+# Character scope: one actual defender. Both coalition and individual CBs use
+# the same transaction. An eligible sovereign keeps their realm intact as a
+# vassal. Higher-ranking defenders yield only land inside the explicit target.
+# Inputs: td_target, td_dominant, td_settlement_war, td_subjugation_change.
+td_apply_subjugation_defender_outcome_effect = {
+    save_scope_as = td_subjugation_defender
+    if = {
+        limit = { td_subjugation_whole_realm_vassal_trigger = yes }
+        change_liege = { liege = scope:td_dominant change = scope:td_subjugation_change }
+    }
+    else_if = {
+        # A co-defender already carried by its sovereign's whole-realm oath
+        # must not have its personal title separately confiscated.
+        limit = {
+            NOT = {
+                any_liege_or_above = {
+                    td_subjugation_settlement_defender_trigger = yes
+                    td_subjugation_whole_realm_vassal_trigger = yes
+                }
+            }
+        }
+        setup_de_jure_cb = {
+            attacker = scope:td_dominant
+            defender = scope:td_subjugation_defender
+            change = scope:td_subjugation_change
+            title = scope:td_target
+        }
+    }
+}

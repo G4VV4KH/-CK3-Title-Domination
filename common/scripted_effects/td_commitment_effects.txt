@@ -10,7 +10,18 @@
         }
         every_in_list = {
             variable = td_joined
-            limit = { is_alive = yes is_vassal_or_below_of = scope:td_dominant NOT = { is_in_list = td_ready_attackers } }
+            limit = {
+                is_alive = yes
+                is_vassal_or_below_of = scope:td_dominant
+                NOT = { is_in_list = td_ready_attackers }
+                # A voluntary vassal stays at home if a common war would
+                # oppose their ally or truce partner. Separate wars filter
+                # participation individually against their primary defender.
+                OR = {
+                    scope:td_target = { has_variable = td_individual_phase }
+                    td_pact_with_defending_side_trigger = no
+                }
+            }
             add_to_list = td_ready_attackers
         }
     }
@@ -36,9 +47,12 @@ td_form_coalition_effect = {
             remove_variable = td_wait_deadline
             remove_variable = td_wait_until
         }
-        td_capture_formation_diplomacy_effect = yes
         scope:td_dominant = {
-            start_war = { cb = td_domination_cb target = scope:td_main_defender target_title = scope:td_target }
+            if = {
+                limit = { scope:td_target = { has_variable = td_subjugation_phase } }
+                start_war = { cb = td_subjugation_cb target = scope:td_main_defender target_title = scope:td_target }
+            }
+            else = { start_war = { cb = td_domination_cb target = scope:td_main_defender target_title = scope:td_target } }
         }
         if = {
             limit = { exists = scope:td_target.var:td_war }
@@ -71,15 +85,27 @@ td_form_coalition_effect = {
                 limit = { NOT = { td_ready_parties_joined_trigger = yes } }
                 td_abort_formation_effect = yes
             }
-            else = { td_settle_diplomacy_effect = yes }
         }
         else = { td_abort_formation_effect = yes }
+    }
+    else_if = {
+        limit = { scope:td_target = { has_variable = td_subjugation_phase } }
+        td_finish_uncontested_subjugation_effect = yes
     }
     else = { td_victory_effect = yes }
 }
 
 # A changed military situation or a rejected native command cancels/refunds once.
 td_abort_formation_effect = {
+    if = {
+        limit = { scope:td_target = { OR = { has_variable = td_subjugation_offer has_variable = td_subjugation_phase } } }
+        td_abort_subjugation_effect = yes
+    }
+    else = { td_abort_first_phase_formation_effect = yes }
+}
+
+# Only the first phase can refund the original creation price and undo its title.
+td_abort_first_phase_formation_effect = {
     if = {
         limit = {
             scope:td_target = {

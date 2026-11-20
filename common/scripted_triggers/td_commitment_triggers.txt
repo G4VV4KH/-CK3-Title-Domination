@@ -38,9 +38,11 @@ td_is_ready_attacker_trigger = {
     }
 }
 
-# Every committed fighter and volunteer must fit the same native coalition.
+# Opposing parties must fit their war. Co-defenders must also be able to
+# serve together when the second phase uses a single coalition.
 td_core_parties_compatible_trigger = {
     scope:td_target.var:td_dominant = {
+        td_pact_with_defending_side_trigger = no
         NOR = {
             any_war_enemy = { td_is_ready_fighter_trigger = yes }
             any_war_ally = { td_is_ready_fighter_trigger = yes }
@@ -48,12 +50,15 @@ td_core_parties_compatible_trigger = {
             any_vassal_or_below = { td_is_ready_fighter_trigger = yes }
         }
     }
-    NOT = {
-        scope:td_target = {
-            any_in_list = {
-                variable = td_fighters
-                td_current_respondent_trigger = yes
-                any_war_enemy = { td_is_ready_fighter_trigger = yes }
+    scope:td_target = {
+        OR = {
+            has_variable = td_individual_phase
+            NOT = {
+                any_in_list = {
+                    variable = td_fighters
+                    td_current_respondent_trigger = yes
+                    any_war_enemy = { td_is_ready_fighter_trigger = yes }
+                }
             }
         }
     }
@@ -136,11 +141,16 @@ td_response_context_trigger = {
 # Same-side enemies and opposite-side enemies/allies/hierarchy are incompatible.
 # Unrelated wars, and allies on the intended same side, remain allowed.
 td_response_fighter_military_trigger = {
+    td_pact_with_attacking_side_trigger = no
     NOR = {
-        any_war_enemy = { OR = { td_is_ready_fighter_trigger = yes td_is_ready_attacker_trigger = yes } }
+        any_war_enemy = { td_is_ready_attacker_trigger = yes }
         any_war_ally = { td_is_ready_attacker_trigger = yes }
         any_liege_or_above = { td_is_ready_attacker_trigger = yes }
         any_vassal_or_below = { td_is_ready_attacker_trigger = yes }
+    }
+    OR = {
+        scope:td_target = { has_variable = td_individual_phase }
+        NOT = { any_war_enemy = { td_is_ready_fighter_trigger = yes } }
     }
 }
 

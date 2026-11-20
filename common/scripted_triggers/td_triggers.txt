@@ -1,7 +1,6 @@
 ﻿# Shared inputs: scope:td_dominant = actor, scope:td_target = selected title.
-# The title-window command supplies the exact ordinary-creation availability
-# check. AI's separate territorial filter is deliberately a conservative choice,
-# not a restriction on player targets blocked by another vanilla requirement.
+# The native creatable-title iterator excludes structural blockers and ignores
+# the ordinary gold price. The title window also checks its actual command.
 
 # Keep the title action visible while temporary start restrictions disable it.
 td_actor_visible_trigger = {
@@ -33,6 +32,28 @@ td_target_eligible_trigger = {
 	NOT = { exists = holder }
 	NOT = { has_variable = td_active }
 	any_de_jure_county = { always = yes }
+	td_territory_allowed_trigger = yes
+	td_ordinary_creation_blocked_trigger = yes
+}
+
+# Title scope. Two governments have additional vanilla title-window rank
+# restrictions. Both exceptions still apply when the ordinary command or the
+# game's creatable-title list alone would allow creation.
+td_ordinary_creation_blocked_trigger = {
+	save_temporary_scope_as = td_ordinary_target
+	scope:td_dominant = {
+		OR = {
+			AND = {
+				government_has_flag = government_is_republic
+				highest_held_title_tier <= scope:td_ordinary_target.tier
+			}
+			AND = {
+				government_has_flag = government_is_nomadic
+				highest_held_title_tier < scope:td_ordinary_target.tier
+			}
+			NOT = { any_alert_creatable_title = { this = scope:td_ordinary_target } }
+		}
+	}
 }
 
 td_can_afford_trigger = {

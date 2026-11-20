@@ -2,7 +2,7 @@
 
 The editable store description is `publishing/description.en.md`. Platform variants and README are generated from it. Keep gameplay scripts, localization and publication materials separate.
 
-The first public package targets CK3 1.20.1.2. Its development history contains scoped engine tests for title creation, response choices, coalition formation, outcomes, costs/cooldown and diplomacy. Test counts from different revisions must not be added together or represented as one current run.
+The current public package targets CK3 1.21.0.3 Florin. Its development history contains scoped engine tests for title creation, response choices, coalition formation, outcomes, costs/cooldown and diplomacy. Test counts from different revisions must not be added together or represented as one current run.
 
 For a gameplay change, test the affected paths in an isolated native CK3 profile and bind the result to the complete source snapshot. In particular, inspect actual truce expiry dates as well as the displayed peace terms. Preserve failed attempts and raw local evidence. Hidden engine testing does not prove visual layout.
 

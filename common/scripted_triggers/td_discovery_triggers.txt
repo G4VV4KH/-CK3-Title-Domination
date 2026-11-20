@@ -1,0 +1,52 @@
+﻿# Title scope. Use the current de jure hierarchy, including de jure drift.
+td_territory_allowed_trigger = {
+    trigger_if = {
+        limit = { has_game_rule = td_territory_capital }
+        exists = scope:td_dominant.capital_county
+        scope:td_dominant.capital_county = { target_is_de_jure_liege_or_above = prev }
+    }
+    trigger_else_if = {
+        limit = { has_game_rule = td_territory_realm }
+        any_de_jure_county = { exists = holder holder.top_liege = scope:td_dominant }
+    }
+    trigger_else = { always = yes }
+}
+
+# The native title window, the discovery decision and the final event all use
+# the same target eligibility and resource requirements.
+td_discovery_title_available_trigger = {
+    save_temporary_scope_as = td_target
+    td_target_eligible_trigger = yes
+    scope:td_dominant = { td_can_afford_trigger = yes }
+}
+
+# Character scope. IsShown only needs the first affordable option. The full
+# list is populated by the decision widget when the player opens it.
+td_discovery_available_trigger = {
+    is_ai = no
+    td_actor_eligible_trigger = yes
+    gold >= td_base_gold_cost_value
+    prestige >= td_base_prestige_cost_value
+    save_temporary_scope_as = td_dominant
+    trigger_if = {
+        limit = { has_game_rule = td_territory_capital }
+        exists = capital_county
+        capital_county = {
+            any_this_title_or_de_jure_above = { td_discovery_title_available_trigger = yes }
+        }
+    }
+    trigger_else_if = {
+        limit = { has_game_rule = td_territory_realm }
+        any_realm_county = {
+            any_this_title_or_de_jure_above = { td_discovery_title_available_trigger = yes }
+        }
+    }
+    trigger_else = {
+        OR = {
+            any_duchy = { td_discovery_title_available_trigger = yes }
+            any_kingdom = { td_discovery_title_available_trigger = yes }
+            any_empire = { td_discovery_title_available_trigger = yes }
+            any_hegemony = { td_discovery_title_available_trigger = yes }
+        }
+    }
+}

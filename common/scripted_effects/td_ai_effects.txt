@@ -43,3 +43,49 @@ td_ai_consider_campaign_effect = {
 		}
 	}
 }
+
+# Medium and Frequent search nearby titles before committing their single start.
+# Compare only affordable candidates. Rebuilding respondents for each one also
+# lets a ruler try a weaker neighbour when the first prospect is too strong.
+td_ai_search_local_titles_effect = {
+	save_scope_as = td_dominant
+	capital_county = {
+		every_this_title_or_de_jure_above = {
+			limit = { tier >= tier_duchy }
+			add_to_list = td_ai_local_titles
+		}
+	}
+	every_character_to_title_neighboring_and_across_water_duchy = {
+		every_this_title_or_de_jure_above = {
+			limit = { NOT = { is_in_list = td_ai_local_titles } }
+			add_to_list = td_ai_local_titles
+		}
+	}
+	every_in_list = {
+		list = td_ai_local_titles
+		limit = { td_target_eligible_trigger = yes }
+		save_scope_as = td_target
+		scope:td_dominant = {
+			if = {
+				limit = {
+					td_can_afford_trigger = yes
+					trigger_if = {
+						limit = { has_game_rule = td_ai_medium }
+						gold >= { value = td_gold_cost_value multiply = 1.1 }
+						prestige >= { value = td_prestige_cost_value multiply = 1.1 }
+					}
+				}
+				td_collect_targets_effect = yes
+				if = {
+					limit = { current_military_strength >= td_ai_local_required_strength_value }
+					scope:td_target = { add_to_list = td_ai_viable_titles }
+				}
+			}
+		}
+	}
+	random_in_list = {
+		list = td_ai_viable_titles
+		save_scope_as = td_target
+		scope:td_dominant = { td_begin_effect = yes }
+	}
+}

@@ -1,0 +1,36 @@
+﻿td_discover_domination_decision = {
+    picture = { reference = "gfx/interface/illustrations/decisions/decision_found_kingdom.dds" }
+    decision_group_type = major
+    ai_check_interval = 0
+    desc = td_discover_domination_desc
+    selection_tooltip = td_discover_domination_tooltip
+    confirm_text = td_discover_domination_confirm
+    is_shown = { td_discovery_available_trigger = yes }
+    effect = {
+        hidden_effect = {
+            save_scope_as = td_dominant
+            if = {
+                limit = {
+                    td_actor_eligible_trigger = yes
+                    exists = scope:selected_item
+                    scope:selected_item = { td_discovery_title_available_trigger = yes }
+                }
+                scope:selected_item = {
+                    open_view_data = { view = title_view_window data = this player = scope:td_dominant }
+                }
+            }
+        }
+    }
+    widget = {
+        gui = "td_domination_title_picker"
+        controller = select_scope_object
+        show_from_start = yes
+        decision_to_second_step_button = "CONTINUE"
+        setup_items = {
+            scope:actor = { td_discovery_collect_titles_effect = yes }
+        }
+        # The decisions list evaluates the widget before its detail view exists.
+        default_item = { scope:actor = { td_discovery_select_title_effect = yes } }
+        ai_select_item = { scope:actor = { td_discovery_select_title_effect = yes } }
+    }
+}

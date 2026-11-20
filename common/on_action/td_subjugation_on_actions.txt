@@ -1,0 +1,21 @@
+﻿# Root is the title, so a legitimate successor can receive the pending offer.
+td_open_subjugation_offer = {
+    trigger = {
+        td_event_campaign_current_trigger = yes
+        td_subjugation_offer_current_trigger = yes
+        scope:td_target = { has_variable = td_subjugation_offer_queued }
+    }
+    effect = {
+        scope:td_target = { remove_variable = td_subjugation_offer_queued }
+        td_load_campaign_effect = yes
+        td_prepare_subjugation_targets_effect = yes
+        if = {
+            limit = { any_in_list = { list = td_ready_fighters always = yes } }
+            td_build_subjugation_preview_effect = yes
+            scope:td_target = { set_variable = { name = td_subjugation_offer_recipient value = scope:td_dominant } }
+            td_capture_event_generation_effect = yes
+            scope:td_dominant = { trigger_event = title_domination.0100 }
+        }
+        else = { td_finish_subjugation_campaign_effect = yes }
+    }
+}

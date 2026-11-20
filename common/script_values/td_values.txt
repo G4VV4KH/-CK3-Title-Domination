@@ -54,8 +54,11 @@ td_distance_multiplier_value = {
 	}
 }
 
+td_base_gold_cost_value = { value = 150 }
+td_base_prestige_cost_value = { value = 300 }
+
 td_gold_cost_value = {
-	value = 150
+	value = td_base_gold_cost_value
 	if = { limit = { scope:td_target.tier = tier_kingdom } value = 450 }
 	else_if = { limit = { scope:td_target.tier = tier_empire } value = 1200 }
 	else_if = { limit = { scope:td_target.tier >= tier_hegemony } value = 2400 }
@@ -64,7 +67,7 @@ td_gold_cost_value = {
 }
 
 td_prestige_cost_value = {
-	value = 300
+	value = td_base_prestige_cost_value
 	if = { limit = { scope:td_target.tier = tier_kingdom } value = 750 }
 	else_if = { limit = { scope:td_target.tier = tier_empire } value = 1800 }
 	else_if = { limit = { scope:td_target.tier >= tier_hegemony } value = 3600 }
@@ -112,3 +115,27 @@ td_ai_enemy_strength_value = {
 td_ai_required_strength_value = { value = td_ai_enemy_strength_value multiply = 1.35 }
 td_ai_gold_reserve_value = { value = td_gold_cost_value multiply = 1.25 }
 td_ai_prestige_reserve_value = { value = td_prestige_cost_value multiply = 1.25 }
+
+# Estimate first-phase resistance before anyone answers. Each ruler's troops
+# count in proportion to the same response weights used by the campaign.
+td_ai_local_response_weight_value = {
+	value = td_ai_fight_weight_value
+	add = td_ai_ignore_weight_value
+	add = td_forecast_join_weight_value
+	add = td_forecast_religion_weight_value
+}
+
+td_ai_local_required_strength_value = {
+	value = 0
+	every_in_list = {
+		list = td_targets
+		limit = { NOT = { td_live_pact_trigger = { OTHER = scope:td_dominant } } }
+		add = {
+			value = td_ai_fight_weight_value
+			divide = td_ai_local_response_weight_value
+			multiply = current_military_strength
+		}
+	}
+	if = { limit = { has_game_rule = td_ai_medium } multiply = 1.1 }
+	else = { multiply = 0.8 }
+}

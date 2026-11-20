@@ -1,0 +1,27 @@
+﻿# Snapshot each protected de jure ruler once for the preview, and show the
+# directions individually if two pacts or both directions coexist.
+td_build_diplomacy_preview_effect = {
+    every_in_list = { list = td_dp_allies remove_from_list = td_dp_allies }
+    every_in_list = { list = td_dp_outgoing remove_from_list = td_dp_outgoing }
+    every_in_list = { list = td_dp_incoming remove_from_list = td_dp_incoming }
+    save_scope_value_as = { name = td_dp_count value = 0 }
+    every_in_list = {
+        list = td_targets
+        limit = { td_live_pact_trigger = { OTHER = scope:td_dominant } }
+        save_scope_as = td_dp_candidate
+        save_scope_value_as = { name = td_dp_count value = { value = scope:td_dp_count add = 1 } }
+        if = { limit = { is_allied_to = scope:td_dominant } add_to_list = td_dp_allies }
+        if = { limit = { scope:td_dominant = { has_truce = scope:td_dp_candidate } } add_to_list = td_dp_outgoing }
+        if = { limit = { has_truce = scope:td_dominant } add_to_list = td_dp_incoming }
+    }
+}
+
+td_show_diplomacy_preview_effect = {
+    if = {
+        limit = { exists = scope:td_dp_count scope:td_dp_count > 0 }
+        custom_tooltip = td_dp_header_tt
+        every_in_list = { list = td_dp_allies custom_tooltip = td_dp_row_alliance_tt }
+        every_in_list = { list = td_dp_outgoing custom_tooltip = td_dp_row_outgoing_tt }
+        every_in_list = { list = td_dp_incoming custom_tooltip = td_dp_row_incoming_tt }
+    }
+}

@@ -17,25 +17,66 @@ td_diplomacy_record_current_trigger = {
     trigger_else = { always = no }
 }
 
-td_diplomacy_record_actual_enemies_trigger = {
-    td_diplomacy_record_current_trigger = yes
-    exists = var:td_pair_actor
-    exists = var:td_pair_victim
-    exists = scope:td_target.var:td_war
-    trigger_if = {
-        limit = {
-            exists = var:td_pair_actor
-            exists = var:td_pair_victim
-            exists = scope:td_target.var:td_war
-        }
-        var:td_pair_actor = { is_alive = yes is_attacker_in_war = scope:td_target.var:td_war }
-        var:td_pair_victim = { is_alive = yes is_defender_in_war = scope:td_target.var:td_war }
+# Character scope. Treat a truce in either direction as protecting the pair.
+td_live_pact_trigger = {
+    OR = {
+        is_allied_to = $OTHER$
+        has_truce = $OTHER$
+        $OTHER$ = { has_truce = prev }
     }
-    trigger_else = { always = no }
 }
 
-# Diplomatic pacts never gate a defensive Fight or assign a coalition side.
-# The exemption mirrors the installed on_declared_war truce-penalty guard.
-td_diplomacy_truce_penalty_trigger = {
-    NOT = { has_character_flag = allowed_war_declaration_sans_truce_penalties }
+# Check the live relation and this phase's snapshot. Taking an oath can
+# recalculate alliances before the next ruler answers on the same date.
+td_protected_pair_trigger = {
+    save_temporary_scope_as = td_pact_query_ruler
+    OR = {
+        td_live_pact_trigger = { OTHER = $OTHER$ }
+        scope:td_target = {
+            any_in_list = {
+                variable = td_diplomacy_pairs
+                td_diplomacy_record_current_trigger = yes
+                OR = {
+                    AND = { var:td_pair_actor = scope:td_pact_query_ruler var:td_pair_victim = $OTHER$ }
+                    AND = { var:td_pair_victim = scope:td_pact_query_ruler var:td_pair_actor = $OTHER$ }
+                }
+            }
+        }
+    }
+}
+
+# Replies are ordered. Each new ruler respects the pacts of the sides
+# already chosen, including fealty accepted in the first phase.
+td_pact_with_attacking_side_trigger = {
+    save_temporary_scope_as = td_pact_respondent
+    OR = {
+        scope:td_target.var:td_dominant = { td_protected_pair_trigger = { OTHER = scope:td_pact_respondent } }
+        scope:td_target = {
+            any_in_list = {
+                variable = td_joined
+                is_alive = yes
+                is_vassal_or_below_of = scope:td_target.var:td_dominant
+                td_protected_pair_trigger = { OTHER = scope:td_pact_respondent }
+            }
+        }
+    }
+}
+
+td_pact_with_defending_side_trigger = {
+    save_temporary_scope_as = td_pact_respondent
+    scope:td_target = {
+        any_in_list = {
+            variable = td_fighters
+            td_current_respondent_trigger = yes
+            td_protected_pair_trigger = { OTHER = scope:td_pact_respondent }
+        }
+    }
+}
+
+td_neutrality_available_trigger = {
+    trigger_if = {
+        limit = { scope:td_target = { has_variable = td_subjugation_phase } }
+        td_pact_with_attacking_side_trigger = yes
+    }
+    trigger_else = { always = yes }
 }

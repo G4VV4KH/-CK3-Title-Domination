@@ -3,7 +3,13 @@
 title_domination.0001 = {
     type = character_event
     title = title_domination.0001.t
-    desc = title_domination.0001.desc
+    desc = {
+        desc = title_domination.0001.desc
+        triggered_desc = {
+            trigger = { exists = scope:td_dp_count scope:td_dp_count > 0 }
+            desc = td_dp_start_desc
+        }
+    }
     theme = war
     left_portrait = root
     option = {
@@ -14,6 +20,7 @@ title_domination.0001 = {
             td_can_afford_trigger = yes
             scope:td_target = { td_target_eligible_trigger = yes }
         }
+        td_show_diplomacy_preview_effect = yes
         if = {
             limit = { exists = scope:td_fc_own_strength }
             custom_tooltip = td_fc_header_tt
@@ -94,7 +101,26 @@ title_domination.0002 = {
     type = character_event
     title = title_domination.0002.t
     desc = {
-        desc = title_domination.0002.desc
+        first_valid = {
+            triggered_desc = {
+                trigger = { scope:td_target = { has_variable = td_subjugation_phase } }
+                desc = title_domination.0002.subjugation_desc
+            }
+            desc = title_domination.0002.desc
+        }
+        triggered_desc = {
+            trigger = { scope:td_target = { has_variable = td_individual_phase } }
+            desc = td_subjugation_mode_individual_tt
+        }
+        triggered_desc = {
+            trigger = {
+                scope:td_target = {
+                    has_variable = td_subjugation_phase
+                    NOT = { has_variable = td_individual_phase }
+                }
+            }
+            desc = td_subjugation_mode_coalition_tt
+        }
         triggered_desc = {
             trigger = { is_at_war_with = scope:td_dominant }
             desc = td_oath_current_war_desc
@@ -124,13 +150,17 @@ title_domination.0002 = {
                 td_can_fight_trigger = yes
             }
         }
-        custom_tooltip = td_fight_tt
-        custom_tooltip = td_diplomacy_defend_tt
+        if = {
+            limit = { scope:td_target = { has_variable = td_subjugation_phase } }
+            custom_tooltip = td_subjugation_fight_tt
+        }
+        else = { custom_tooltip = td_fight_tt }
         hidden_effect_new_object = { td_event_choose_fight_effect = yes }
         ai_will_select = td_ai_fight_weight_value
     }
     option = {
         name = title_domination.0002.ignore
+        trigger = { td_neutrality_available_trigger = yes }
         custom_tooltip = td_neutral_tt
         hidden_effect_new_object = { td_event_choose_ignore_effect = yes }
         ai_will_select = td_ai_ignore_weight_value
@@ -145,7 +175,11 @@ title_domination.0002 = {
                 td_can_join_trigger = yes
             }
         }
-        custom_tooltip = td_join_tt
+        if = {
+            limit = { scope:td_target = { has_variable = td_subjugation_phase } }
+            custom_tooltip = td_subjugation_join_tt
+        }
+        else = { custom_tooltip = td_join_tt }
         custom_tooltip = td_diplomacy_join_tt
         if = { limit = { is_at_war_with = scope:td_dominant } custom_tooltip = td_oath_current_war_tt }
         hidden_effect_new_object = { td_event_choose_join_effect = yes }
@@ -168,6 +202,16 @@ title_domination.0002 = {
         custom_tooltip = td_diplomacy_join_tt
         hidden_effect_new_object = { td_event_request_religion_effect = yes }
         ai_will_select = td_ai_religion_weight_value
+    }
+    option = {
+        name = title_domination.0002.unavailable
+        trigger = {
+            td_event_response_current_trigger = yes
+            td_subjugation_response_blocked_trigger = yes
+        }
+        custom_tooltip = td_subjugation_response_blocked_tt
+        hidden_effect_new_object = { td_event_abort_subjugation_response_effect = yes }
+        ai_chance = { base = 100 }
     }
 }
 

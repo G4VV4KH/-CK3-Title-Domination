@@ -9,6 +9,17 @@ td_response_choice_phase_trigger = {
     scope:td_target = { NOT = { has_variable = td_religion_pending } }
 }
 
+td_subjugation_response_blocked_trigger = {
+    td_response_context_trigger = yes
+    scope:td_target = { has_variable = td_subjugation_phase }
+    NOR = {
+        td_neutrality_available_trigger = yes
+        td_can_fight_trigger = yes
+        td_can_join_trigger = yes
+        td_can_request_religion_trigger = yes
+    }
+}
+
 td_event_queue_current_trigger = {
     td_event_campaign_current_trigger = yes
     td_queue_gathering_trigger = yes

@@ -1,0 +1,24 @@
+﻿# Controls only second-phase subjugation wars; phase one is unchanged.
+td_subjugation_war_mode = {
+    categories = { game_modes }
+    default = td_subjugation_coalition
+    td_subjugation_coalition = { }
+    td_subjugation_individual = { }
+}
+
+td_domination_territory = {
+    categories = { game_modes }
+    default = td_territory_all
+    td_territory_all = { }
+    td_territory_realm = { }
+    td_territory_capital = { }
+}
+
+td_ai_frequency = {
+    categories = { game_modes }
+    default = td_ai_rare
+    td_ai_off = { }
+    td_ai_rare = { }
+    td_ai_medium = { }
+    td_ai_frequent = { }
+}

@@ -35,8 +35,17 @@ td_reconcile_active_campaigns = {
                     td_migrate_legacy_commitment_effect = yes
                 }
                 else_if = {
+                    limit = { td_campaign_active_trigger = yes has_variable = td_subjugation_offer }
+                    td_reconcile_subjugation_offer_effect = yes
+                }
+                else_if = {
                     limit = { td_campaign_active_trigger = yes has_variable = td_gathering }
                     td_reconcile_response_queue_effect = yes
+                }
+                else_if = {
+                    limit = { td_campaign_active_trigger = yes has_variable = td_individual_phase }
+                    # Each remaining native war keeps the same campaign lock.
+                    td_finish_individual_if_empty_effect = yes
                 }
                 else_if = {
                     limit = {
@@ -115,6 +124,10 @@ td_inherit_campaign_title = {
                 # rollback until its commit, just like other title cancellation.
                 td_capture_event_generation_effect = yes
                 scope:td_target = { trigger_event = { on_action = td_poll_campaign_commitments delayed = yes } }
+            }
+            else_if = {
+                limit = { scope:td_target = { has_variable = td_subjugation_offer } }
+                td_reconcile_subjugation_offer_effect = yes
             }
             else_if = {
                 limit = { scope:td_target = { has_variable = td_gathering } }

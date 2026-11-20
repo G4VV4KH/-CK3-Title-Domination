@@ -1,0 +1,130 @@
+﻿td_individual_subjugation_cb = {
+    icon = county_conquest_cb
+    group = event
+    allowed_for_character = { always = no }
+    target_titles = all
+    target_de_jure_regions_above = yes
+    use_de_jure_wargoal_only = yes
+    target_top_liege_if_outside_realm = no
+    should_check_for_interface_availability = no
+    should_show_war_goal_subview = yes
+    white_peace_possible = no
+    allow_hostages = no
+    check_all_defenders_for_ticking_war_score = yes
+    attacker_score_from_occupation_scale = 150
+    attacker_score_from_battles_scale = 150
+    defender_score_from_battles_scale = 150
+    max_attacker_score_from_battles = 100
+    max_defender_score_from_battles = 100
+    attacker_wargoal_percentage = 1.5
+    defender_ticking_warscore = 0.05
+    imprisonment_by_attacker_give_war_score = no
+    ai = no
+    cost = { prestige = 0 }
+    should_invalidate = {
+        any_in_list = {
+            list = target_titles
+            OR = {
+                NOT = { has_variable = td_active }
+                NOT = { has_variable = td_subjugation_phase }
+                NOT = { has_variable = td_individual_phase }
+                NOT = { holder = scope:attacker }
+            }
+        }
+    }
+    on_declaration = {
+        scope:attacker = { save_scope_as = td_dominant }
+        scope:war = { save_scope_as = td_individual_war }
+        every_in_list = {
+            list = target_titles
+            limit = {
+                has_variable = td_active
+                has_variable = td_subjugation_phase
+                has_variable = td_individual_phase
+                has_variable = td_individual_forming
+                holder = scope:attacker
+            }
+            add_to_variable_list = { name = td_individual_wars target = scope:td_individual_war }
+            set_variable = { name = td_individual_last_started value = scope:td_individual_war }
+        }
+    }
+    on_victory_desc = { desc = td_subjugation_individual_victory }
+    on_defeat_desc = { desc = td_subjugation_individual_defeat }
+    on_white_peace_desc = { desc = td_subjugation_individual_defeat }
+    on_invalidated_desc = { desc = td_subjugation_individual_defeat }
+    on_victory = {
+        scope:attacker = { save_scope_as = td_dominant }
+        # Pre-declaration tooltip contexts need not have a CB root/war.
+        # Clear an inherited local alias before the guarded actual lookup.
+        clear_saved_scope = td_individual_war
+        if = {
+            limit = { exists = root }
+            root.war ?= { save_scope_as = td_individual_war }
+        }
+        every_in_list = {
+            list = target_titles
+            limit = { has_variable = td_active NOT = { has_variable = td_rolling_back } }
+            save_scope_as = td_target
+            scope:td_dominant = { td_individual_victory_effect = yes }
+        }
+    }
+    on_defeat = {
+        scope:attacker = { save_scope_as = td_dominant }
+        # Pre-declaration tooltip contexts need not have a CB root/war.
+        # Clear an inherited local alias before the guarded actual lookup.
+        clear_saved_scope = td_individual_war
+        if = {
+            limit = { exists = root }
+            root.war ?= { save_scope_as = td_individual_war }
+        }
+        every_in_list = {
+            list = target_titles
+            limit = { has_variable = td_active NOT = { has_variable = td_rolling_back } }
+            save_scope_as = td_target
+            scope:td_dominant = { td_individual_defeat_effect = yes }
+        }
+    }
+    on_white_peace = {
+        scope:attacker = { save_scope_as = td_dominant }
+        # Pre-declaration tooltip contexts need not have a CB root/war.
+        # Clear an inherited local alias before the guarded actual lookup.
+        clear_saved_scope = td_individual_war
+        if = {
+            limit = { exists = root }
+            root.war ?= { save_scope_as = td_individual_war }
+        }
+        every_in_list = {
+            list = target_titles
+            limit = { has_variable = td_active NOT = { has_variable = td_rolling_back } }
+            save_scope_as = td_target
+            scope:td_dominant = { td_individual_defeat_effect = yes }
+        }
+    }
+    on_invalidated = {
+        scope:attacker = { save_scope_as = td_dominant }
+        # Pre-declaration tooltip contexts need not have a CB root/war.
+        # Clear an inherited local alias before the guarded actual lookup.
+        clear_saved_scope = td_individual_war
+        if = {
+            limit = { exists = root }
+            root.war ?= { save_scope_as = td_individual_war }
+        }
+        every_in_list = {
+            list = target_titles
+            limit = { has_variable = td_active NOT = { has_variable = td_rolling_back } }
+            save_scope_as = td_target
+            scope:td_dominant = { td_individual_defeat_effect = yes }
+        }
+    }
+    on_primary_attacker_death = inherit
+    on_primary_defender_death = inherit
+    check_attacker_inheritance_validity = no
+    check_defender_inheritance_validity = no
+    attacker_allies_inherit = yes
+    defender_allies_inherit = yes
+    transfer_behavior = transfer
+    war_name = td_subjugation_individual_war
+    war_name_base = td_subjugation_individual_war
+    cb_name = td_subjugation_individual_cb
+    interface_priority = 74
+}

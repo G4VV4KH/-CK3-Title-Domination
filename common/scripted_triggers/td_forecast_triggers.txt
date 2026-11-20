@@ -2,6 +2,13 @@
 # scope:td_dominant and scope:td_target are the original preview inputs.
 td_forecast_fight_available_trigger = {
     td_respondent_trigger = yes
+    save_temporary_scope_as = td_pact_respondent
+    NOT = {
+        any_in_list = {
+            list = td_fc_attackers
+            td_live_pact_trigger = { OTHER = scope:td_pact_respondent }
+        }
+    }
     NOR = {
         any_war_enemy = { OR = { is_in_list = td_fc_fighters is_in_list = td_fc_attackers } }
         any_war_ally = { is_in_list = td_fc_attackers }

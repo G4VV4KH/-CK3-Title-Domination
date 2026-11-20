@@ -2,6 +2,19 @@
 # Availability is still enforced by the existing event triggers.
 # All values are nonnegative; a truce modifier expresses a peace preference,
 # not a claim that defending against an attack breaks a truce.
+# Compare the respondent's current army with the dominant's current army only.
+# Adding volunteer or vassal strength here could count the same levies twice.
+# Two empty armies are equal; a nonempty army against zero is in the strong band.
+td_response_strength_ratio_value = {
+    value = 1
+    if = {
+        limit = { scope:td_dominant = { current_military_strength > 0 } }
+        value = current_military_strength
+        divide = scope:td_dominant.current_military_strength
+    }
+    else_if = { limit = { current_military_strength > 0 } value = 2 }
+}
+
 td_ai_fight_weight_value = {
     value = 50
     if = { limit = { has_trait = brave } add = 50 }
@@ -10,13 +23,20 @@ td_ai_fight_weight_value = {
     if = { limit = { is_allied_to = scope:td_dominant } subtract = 30 }
     if = { limit = { td_ai_truce_with_dominant_trigger = yes } subtract = 10 }
     if = { limit = { td_ai_allied_to_fighter_trigger = yes } add = 20 }
-    min = 0
+    if = { limit = { opinion = { target = scope:td_dominant value <= -25 } } add = 30 }
+    else_if = { limit = { opinion = { target = scope:td_dominant value >= 50 } } subtract = 20 }
+    if = { limit = { td_response_strength_ratio_value >= 1.5 } add = 40 }
+    else_if = { limit = { td_response_strength_ratio_value <= 0.5 } subtract = 30 }
+    # An equal/higher-rank ruler may have Fight as their only legal phase-two
+    # reply. A preference must never make that sole valid choice weight zero.
+    min = 1
 }
 td_ai_ignore_weight_value = {
     value = 30
     if = { limit = { has_trait = craven } add = 50 }
     if = { limit = { any_character_war = { NOT = { using_cb = td_domination_cb } } } add = 30 }
     if = { limit = { td_ai_truce_with_dominant_trigger = yes } add = 10 }
+    if = { limit = { td_neutrality_available_trigger = no } value = 0 }
 }
 td_ai_join_weight_value = {
     value = 10
@@ -24,8 +44,11 @@ td_ai_join_weight_value = {
     if = { limit = { has_trait = content } add = 20 }
     if = { limit = { has_trait = ambitious } subtract = 30 }
     if = { limit = { opinion = { target = scope:td_dominant value >= 50 } } add = 30 }
+    else_if = { limit = { opinion = { target = scope:td_dominant value <= -25 } } subtract = 20 }
     if = { limit = { is_allied_to = scope:td_dominant } add = 30 }
     if = { limit = { td_ai_allied_to_fighter_trigger = yes } subtract = 20 }
+    if = { limit = { td_response_strength_ratio_value >= 1.5 } subtract = 20 }
+    else_if = { limit = { td_response_strength_ratio_value <= 0.5 } add = 40 }
     min = 0
 }
 td_ai_religion_weight_value = {
@@ -34,6 +57,10 @@ td_ai_religion_weight_value = {
     if = { limit = { has_trait = content } add = 20 }
     if = { limit = { is_allied_to = scope:td_dominant } add = 30 }
     if = { limit = { td_ai_allied_to_fighter_trigger = yes } subtract = 20 }
+    if = { limit = { opinion = { target = scope:td_dominant value >= 50 } } add = 20 }
+    else_if = { limit = { opinion = { target = scope:td_dominant value <= -25 } } subtract = 15 }
+    if = { limit = { td_response_strength_ratio_value >= 1.5 } subtract = 15 }
+    else_if = { limit = { td_response_strength_ratio_value <= 0.5 } add = 30 }
     min = 0
 }
 

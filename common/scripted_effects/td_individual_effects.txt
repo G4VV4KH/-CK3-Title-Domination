@@ -1,0 +1,252 @@
+﻿# Inputs: current campaign td_target/td_dominant and freshly checked local
+# td_ready_fighters/td_ready_attackers. Shared preflight is owned by the caller.
+# No single td_war is written: every independent native war is title-registered.
+td_form_individual_wars_effect = {
+    if = {
+        limit = {
+            td_campaign_active_trigger = yes
+            scope:td_target = {
+                has_variable = td_subjugation_phase
+                has_variable = td_individual_phase
+                has_variable = td_gathering
+                NOT = { has_variable = td_individual_forming }
+                NOT = { any_in_list = { variable = td_individual_wars always = yes } }
+            }
+            any_in_list = { list = td_ready_fighters always = yes }
+        }
+        scope:td_target = {
+            set_variable = { name = td_individual_forming value = yes }
+            remove_variable = td_individual_formation_failed
+            remove_variable = td_individual_last_started
+            remove_variable = td_gathering
+        }
+        # A tooltip cannot commit this marker and must not declare a war.
+        if = {
+            limit = { scope:td_target = { has_variable = td_individual_forming } }
+            every_in_list = {
+                list = td_ready_fighters
+                limit = { scope:td_target = { NOT = { has_variable = td_individual_formation_failed } } }
+                save_scope_as = td_individual_defender
+                scope:td_target = { remove_variable = td_individual_last_started }
+                scope:td_dominant = {
+                    start_war = {
+                        cb = td_individual_subjugation_cb
+                        target = scope:td_individual_defender
+                        target_title = scope:td_target
+                    }
+                }
+                if = {
+                    limit = { exists = scope:td_target.var:td_individual_last_started }
+                    scope:td_target.var:td_individual_last_started = {
+                        save_scope_as = td_individual_war
+                        save_scope_as = target
+                    }
+                    if = {
+                        limit = {
+                            td_individual_war_current_trigger = yes
+                            scope:td_individual_war = { primary_defender = scope:td_individual_defender }
+                        }
+                        every_in_list = {
+                            list = td_ready_attackers
+                            limit = {
+                                NOT = { is_participant_in_war = scope:td_individual_war }
+                                NOT = { td_protected_pair_trigger = { OTHER = scope:td_individual_defender } }
+                            }
+                            save_scope_as = td_party_to_add
+                            if = {
+                                limit = {
+                                    joiner_not_already_in_another_war_with_any_target_war_participants_trigger = { WARRIOR = scope:td_dominant JOINER = scope:td_party_to_add }
+                                    can_join_war_liege_vassal_check_trigger = { WARRIOR = scope:td_dominant JOINER = scope:td_party_to_add }
+                                }
+                                scope:td_individual_war = { add_attacker = scope:td_party_to_add }
+                                # A rejected legal native add is a formation
+                                # failure; an ineligible volunteer stays a vassal
+                                # without joining this particular war.
+                                if = {
+                                    limit = { NOT = { is_attacker_in_war = scope:td_individual_war } }
+                                    scope:td_target = { set_variable = { name = td_individual_formation_failed value = yes } }
+                                }
+                            }
+                        }
+                    }
+                    else = { scope:td_target = { set_variable = { name = td_individual_formation_failed value = yes } } }
+                }
+                else = { scope:td_target = { set_variable = { name = td_individual_formation_failed value = yes } } }
+            }
+            # Verify every accepted resister has its own actual native war.
+            every_in_list = {
+                list = td_ready_fighters
+                save_scope_as = td_individual_defender
+                if = {
+                    limit = {
+                        scope:td_target = {
+                            NOT = {
+                                any_in_list = {
+                                    variable = td_individual_wars
+                                    using_cb = td_individual_subjugation_cb
+                                    primary_attacker = scope:td_dominant
+                                    primary_defender = scope:td_individual_defender
+                                }
+                            }
+                        }
+                    }
+                    scope:td_target = { set_variable = { name = td_individual_formation_failed value = yes } }
+                }
+            }
+            if = {
+                limit = { scope:td_target = { has_variable = td_individual_formation_failed } }
+                # Cancel only the wars created for this batch.
+                td_abort_subjugation_effect = yes
+            }
+            else = {
+                scope:td_target = {
+                    remove_variable = td_individual_forming
+                    remove_variable = td_individual_last_started
+                    remove_variable = td_individual_formation_failed
+                }
+                td_finish_individual_if_empty_effect = yes
+            }
+        }
+    }
+}
+
+# The war object is removed BEFORE its effects. Native tooltip evaluation ignores
+# that removal, so the committed absence check prevents dry-run transactions.
+td_individual_victory_effect = {
+    if = {
+        limit = { td_individual_war_current_trigger = yes }
+        scope:td_target = { remove_list_variable = { name = td_individual_wars target = scope:td_individual_war } }
+        if = {
+            limit = { scope:td_target = { NOT = { any_in_list = { variable = td_individual_wars this = scope:td_individual_war } } } }
+            scope:td_individual_war = { save_scope_as = td_settlement_war }
+            create_title_and_vassal_change = {
+                type = conquest
+                save_scope_as = td_subjugation_change
+                add_claim_on_loss = yes
+            }
+            scope:td_individual_war.primary_defender = {
+                if = {
+                    limit = { td_subjugation_settlement_defender_trigger = yes }
+                    td_apply_subjugation_defender_outcome_effect = yes
+                }
+            }
+            resolve_title_and_vassal_change = scope:td_subjugation_change
+            # No truce on victory, and no other war/opponent is settled here.
+            td_finish_individual_if_empty_effect = yes
+        }
+    }
+    else_if = {
+        # If authority changed during native settlement, retire this exact war
+        # without transferring territory to an unverified new title holder.
+        limit = { td_individual_war_registered_trigger = yes }
+        td_individual_defeat_effect = yes
+    }
+}
+
+# Defeat/white peace/invalidation never rescind the title or voluntary oaths.
+# Only this war's present primary defender can receive a new directed truce.
+td_individual_defeat_effect = {
+    if = {
+        limit = { td_individual_war_registered_trigger = yes }
+        scope:td_target = { remove_list_variable = { name = td_individual_wars target = scope:td_individual_war } }
+        if = {
+            limit = { scope:td_target = { NOT = { any_in_list = { variable = td_individual_wars this = scope:td_individual_war } } } }
+            if = {
+                limit = { scope:td_target = { has_variable = td_individual_forming } }
+                scope:td_target = { set_variable = { name = td_individual_formation_failed value = yes } }
+            }
+            else = { td_add_individual_defeat_truce_effect = yes }
+            td_finish_individual_if_empty_effect = yes
+        }
+    }
+}
+
+# Valid native war is required. Do not include first-phase fighters or arbitrary
+# allied defenders. Save/restore generic CB scopes used by the localized text.
+td_add_individual_defeat_truce_effect = {
+    clear_saved_scope = td_individual_original_attacker
+    clear_saved_scope = td_individual_original_defender
+    scope:attacker ?= { save_scope_as = td_individual_original_attacker }
+    scope:defender ?= { save_scope_as = td_individual_original_defender }
+    if = {
+        limit = {
+            exists = scope:td_individual_war.primary_attacker
+            exists = scope:td_individual_war.primary_defender
+        }
+        scope:td_individual_war.primary_attacker = { save_scope_as = attacker }
+        scope:td_individual_war.primary_defender = { save_scope_as = defender }
+        if = {
+            limit = {
+                scope:attacker = { is_alive = yes NOT = { this = scope:defender } }
+                scope:defender = { is_alive = yes NOT = { is_vassal_or_below_of = scope:attacker } }
+            }
+            scope:attacker = {
+                custom_tooltip = {
+                    text = td_settlement_truce_tt
+                    add_truce_one_way = {
+                        character = scope:defender
+                        days = standard_truce_duration_days
+                        override = no
+                        war = scope:td_individual_war
+                        result = defeat
+                    }
+                }
+            }
+        }
+    }
+    if = { limit = { exists = scope:td_individual_original_attacker } scope:td_individual_original_attacker = { save_scope_as = attacker } }
+    else = { clear_saved_scope = attacker }
+    if = { limit = { exists = scope:td_individual_original_defender } scope:td_individual_original_defender = { save_scope_as = defender } }
+    else = { clear_saved_scope = defender }
+}
+
+td_finish_individual_if_empty_effect = {
+    if = {
+        limit = {
+            scope:td_target = {
+                has_variable = td_active
+                has_variable = td_individual_phase
+                NOT = { has_variable = td_individual_forming }
+                NOT = { any_in_list = { variable = td_individual_wars always = yes } }
+            }
+        }
+        td_clear_campaign_effect = yes
+    }
+}
+
+# Authority/technical cancellation: retire registered wars only. No unrelated
+# wars, old phase-one opponents, titles or accepted voluntary fealty are touched.
+td_cancel_individual_campaign_effect = {
+    if = {
+        limit = {
+            scope:td_target = {
+                has_variable = td_active
+                has_variable = td_individual_phase
+                NOT = { has_variable = td_rolling_back }
+            }
+        }
+        scope:td_target = { set_variable = { name = td_rolling_back value = yes } }
+        if = {
+            limit = { scope:td_target = { has_variable = td_rolling_back } }
+            every_in_list = { list = td_individual_to_cancel remove_from_list = td_individual_to_cancel }
+            scope:td_target = {
+                every_in_list = { variable = td_individual_wars add_to_list = td_individual_to_cancel }
+            }
+            every_in_list = {
+                list = td_individual_to_cancel
+                # Remove both references while the war still exists.
+                remove_from_list = td_individual_to_cancel
+                save_scope_as = td_individual_war
+                scope:td_target = { remove_list_variable = { name = td_individual_wars target = scope:td_individual_war } }
+                # A rejected native batch never became an accepted campaign
+                # of wars; do not create artificial peace obligations for it.
+                if = {
+                    limit = { scope:td_target = { NOT = { has_variable = td_individual_forming } } }
+                    td_add_individual_defeat_truce_effect = yes
+                }
+                end_war = invalidated
+            }
+            td_clear_campaign_effect = yes
+        }
+    }
+}

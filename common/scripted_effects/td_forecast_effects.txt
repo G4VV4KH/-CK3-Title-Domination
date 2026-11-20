@@ -81,7 +81,6 @@ td_build_forecast_effect = {
                 save_scope_value_as = { name = td_fc_selected_weight value = scope:td_fc_religion_weight }
                 save_scope_value_as = { name = td_fc_selected_conditional value = 1 }
                 save_scope_value_as = { name = td_fc_conditional_count value = { value = scope:td_fc_conditional_count add = 1 } }
-                save_scope_value_as = { name = td_fc_conditional_strength value = { value = scope:td_fc_conditional_strength add = scope:td_fc_candidate_strength } }
             }
             td_forecast_record_support_effect = yes
         }
@@ -165,6 +164,21 @@ td_build_forecast_effect = {
 }
 
 td_forecast_record_support_effect = {
+    # A ruler may pledge fealty while their pact keeps their army at home.
+    save_temporary_scope_as = td_pact_respondent
+    if = {
+        limit = {
+            any_in_list = {
+                list = td_fc_fighters
+                td_live_pact_trigger = { OTHER = scope:td_pact_respondent }
+            }
+        }
+        save_scope_value_as = { name = td_fc_candidate_strength value = 0 }
+    }
+    if = {
+        limit = { scope:td_fc_selected_conditional = 1 }
+        save_scope_value_as = { name = td_fc_conditional_strength value = { value = scope:td_fc_conditional_strength add = scope:td_fc_candidate_strength } }
+    }
     add_to_list = td_fc_support
     add_to_list = td_fc_attackers
     save_scope_value_as = { name = td_fc_support_count value = { value = scope:td_fc_support_count add = 1 } }

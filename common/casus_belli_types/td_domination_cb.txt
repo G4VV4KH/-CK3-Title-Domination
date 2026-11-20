@@ -48,7 +48,7 @@
             list = target_titles
             limit = { has_variable = td_active NOT = { has_variable = td_rolling_back } }
             save_scope_as = td_target
-            scope:td_dominant = { td_add_settlement_truces_effect = { RESULT = victory } td_victory_effect = yes }
+            scope:td_dominant = { td_victory_effect = yes }
         }
     }
     on_defeat = {

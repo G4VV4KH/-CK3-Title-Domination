@@ -1,0 +1,59 @@
+﻿# The offer belongs to the existing campaign, not a reusable future claim.
+td_subjugation_offer_current_trigger = {
+    td_campaign_active_trigger = yes
+    scope:td_target = {
+        has_variable = td_subjugation_offer
+        NOT = { has_variable = td_subjugation_phase }
+        NOT = { exists = var:td_war }
+    }
+}
+
+td_event_subjugation_offer_current_trigger = {
+    td_event_authority_current_trigger = yes
+    td_subjugation_offer_current_trigger = yes
+}
+
+td_subjugation_initiator_eligible_trigger = {
+    is_independent_ruler = yes
+    is_at_war = no
+}
+
+# Native war identity prevents an old callback settling a later campaign/war.
+td_subjugation_war_current_trigger = {
+    td_campaign_active_trigger = yes
+    exists = root.war
+    exists = scope:td_target.var:td_war
+    scope:td_target = { has_variable = td_subjugation_phase }
+    trigger_if = {
+        limit = { exists = root.war exists = scope:td_target.var:td_war }
+        scope:td_target.var:td_war = root.war
+    }
+}
+
+# Only a participant who resisted this demand (or inherited the lead defence)
+# can lose land. A later call to arms by itself carries no territorial stakes.
+td_subjugation_settlement_defender_trigger = {
+    is_alive = yes
+    is_defender_in_war = scope:td_settlement_war
+    save_temporary_scope_as = td_candidate_defender
+    scope:td_target = {
+        NOT = { any_in_list = { variable = td_neutral this = scope:td_candidate_defender } }
+        OR = {
+            any_in_list = { variable = td_fighters this = scope:td_candidate_defender }
+            scope:td_settlement_war.primary_defender = scope:td_candidate_defender
+        }
+    }
+}
+
+# The disputed land identifies the respondent. Changing their liege preserves
+# their whole realm, including holdings and vassals beyond the de jure border.
+td_subjugation_whole_realm_vassal_trigger = {
+    is_alive = yes
+    is_landed = yes
+    is_independent_ruler = yes
+    exists = primary_title
+    primary_title.tier < scope:td_dominant.primary_title.tier
+    any_realm_county = {
+        target_is_de_jure_liege_or_above = scope:td_target
+    }
+}

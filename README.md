@@ -2,50 +2,42 @@
 
 ## At a glance
 
-- 🟢 **Version 0.1.0** · Targets CK3 **1.20.1.2**.
-- 🟢 Standalone gameplay mod for independent rulers of any government.
-- 🟢 Proclaim an uncreated title and face the rulers of its de jure lands.
+- 🟢 **Version 0.1.1** · Targets CK3 **1.21.0.3**.
+- 🟢 Independent landed rulers can proclaim an uncreated duchy, kingdom, empire or hegemony.
+- 🟢 Choose which titles qualify, how second-phase wars work and how often AI rulers start campaigns.
 - 🟢 **Languages:** English, French, German, Japanese, Korean, Polish, Russian, Simplified Chinese and Spanish.
-- 🔴 Victory secures the title; it does not annex resisting or neutral realms.
 
 ## A crown worth fighting for
 
-A title can exist on a map long before anyone can claim it. Put your wealth and prestige behind a proclamation, invite submission, and defend your ambition against those who refuse.
+An empty throne can be yours if you can pay for the proclamation and convince the rulers who live under its banner. Some will bend the knee. Others will make you fight for the crown, then fight again for the land.
 
 ## Proclaim, negotiate, fight
 
-- Open an uncreated title of duchy rank or higher whose normal Create Title action is unavailable. Use **Domination** and review the gold and prestige cost beneath the button.
-- The initiator must be independent, at peace, able to pay, and free of an active domination campaign or cooldown. The target must be available. Cost scales with rank, de jure lands and distance.
-- Before payment, the event tooltip forecasts your forces, likely supporters, resisters and neutrals, with ruler names and contribution shares. This is an estimate, not a promise or a victory chance.
-- Paying creates the title. Rulers answer strongest first within the same game day. They may resist, remain neutral, or swear fealty if their rank is lower than yours. Existing wars can prevent a response.
-- Different-faith rulers may request religious protection only where their contract supports it. You can grant or refuse; refusal returns them to the other choices.
-- Once answers are collected, resisters form the defending side of one war. Volunteers become vassals and join your side. Neutrals remain outside it.
+- The **You can declare domination** decision lists affordable titles. Open a title to see the gold and prestige cost and a forecast of likely supporters, opponents and neutrals. The ordinary Create Title action takes priority when available.
+- Paying the preparation cost creates the title. Local rulers can resist, stay neutral or swear fealty where their rank permits. A ruler of another faith may ask for religious protection. An oath promising protection takes effect only if the vassal contract can grant it.
+- Resisters defend the title together in the first war. Victory secures your crown and voluntary vassals. Defeat destroys the title, releases the campaign’s de jure volunteers and pays reparations to the defenders.
+- After a first-phase victory, keep what you have or press for the remaining de jure lands. The preparation cost is paid once. A defeated lower-ranking independent ruler becomes your direct vassal with their titles, lands and vassals, including holdings outside the contested title. Where vassalage is impossible, settlement covers only the disputed de jure lands. A second-phase defeat leaves you the crown and your voluntary vassals.
+- Alliances and truces protect rulers from fighting one another. A ruler who swears fealty can stay home when their pacts rule out fighting. Rulers protected by treaty can remain neutral and keep their lands.
 
-Victory keeps the title and voluntary vassals. Defeat destroys the title, frees the campaign's de jure volunteers, and divides reparations based on the initial gold price among the resisters. Resisters and neutrals keep their land after your victory; de jure conquest can follow later.
+## Game rules
 
-If nobody resists, the title is secured without a war. Volunteers remain vassals, neutrals stay independent, and the price remains paid. Beginning starts a ten-year personal cooldown; victory, an uncontested title or a refunded technical cancellation clears it. Defeat keeps the remaining time.
-
-## Alliances and truces
-
-Diplomatic ties influence AI choices without forcing a side. Defending against an ally or truce partner is allowed. Only an actual war triggers breach penalties for attacking participants: each attacked ally costs the alliance, 250 prestige and one fame level; breaking an outgoing truce also carries legitimacy penalties, with applicable exceptions. Three-year opinion penalties apply once per type. Defenders, neutrals and peaceful campaigns pay none. Settled wars create normal-duration one-way truces from the dominant to the resisters.
+- **Eligible Titles** — all titles by default, titles with at least one de jure county in your realm, or titles containing your capital. A county held by your vassal counts toward the realm rule.
+- **Subjugation Wars** — choose one common coalition, the default, or individual second-phase wars with separate peace settlements.
+- **AI Campaign Frequency** — Off, Rare (default), Medium or Frequent. On Off, AI rulers still respond to your demands. Frequent gives each eligible ruler a 25% chance per quarter to consider a campaign. They still need peace, resources and sufficient forces.
 
 ## Getting started
 
-1. Enable Title Domination and play an independent ruler at peace.
-2. Open an eligible uncreated title and select **Domination**.
-3. Review the cost and forecast, then begin or cancel.
+1. Enable the mod and play an independent landed ruler at peace.
+2. Open **You can declare domination** in Decisions, or go directly to an eligible uncreated title and select **Domination**.
+3. Review the forecast and price. Confirm to issue the proclamation, then decide how to answer oaths and whether to pursue subjugation.
 
 ## Compatibility and load order
 
-No other mod is required. Government and contract restrictions still apply where relevant. The original nomadic higher-tier title decision remains available. AI rulers can initiate domination and respond to it.
-
-This mod replaces **gui/window_title.gui**. Another mod replacing that window needs a compatibility patch; changing load order alone does not merge both interfaces. Total conversions and multiplayer are not supported by a compatibility guarantee.
+No other mod or DLC is required. The vanilla nomadic higher-tier decision remains available. This mod replaces **gui/window_title.gui**. Another mod replacing the same window needs a merged compatibility patch.
 
 ## Saves and known limits
 
-Back up existing saves before adding the mod; a new campaign is recommended for the first release. Keep the mod enabled while a domination campaign is active. Migration of unfinished older DEV campaigns and removal during a campaign are unsupported.
-
-The forecast excludes outside allies and future recruitment. Human decisions, random AI responses and religious-protection approval can change the result. Long-term AI balance may be adjusted in later releases. Hostages and white peace cannot settle a domination war.
+Back up existing saves before adding or updating the mod. Keep it enabled while a campaign is active. Settlements from wars already concluded retain their original outcome. The forecast excludes outside allies and future recruitment. White peace and hostages cannot settle a domination war. Compatibility with total conversions and multiplayer is unverified.
 
 ## Feedback and support
 

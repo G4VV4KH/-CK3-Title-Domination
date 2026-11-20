@@ -1,0 +1,44 @@
+﻿# Character scope. The decision widget consumes the item_list of title scopes.
+td_discovery_collect_titles_effect = {
+    save_scope_as = td_dominant
+    if = {
+        limit = { has_game_rule = td_territory_capital }
+        capital_county ?= {
+            every_this_title_or_de_jure_above = {
+                limit = { td_discovery_title_available_trigger = yes }
+                add_to_list = item_list
+            }
+        }
+    }
+    else_if = {
+        limit = { has_game_rule = td_territory_realm }
+        every_realm_county = {
+            every_this_title_or_de_jure_above = {
+                limit = { NOT = { is_in_list = item_list } td_discovery_title_available_trigger = yes }
+                add_to_list = item_list
+            }
+        }
+    }
+    else = {
+        every_duchy = { limit = { td_discovery_title_available_trigger = yes } add_to_list = item_list }
+        every_kingdom = { limit = { td_discovery_title_available_trigger = yes } add_to_list = item_list }
+        every_empire = { limit = { td_discovery_title_available_trigger = yes } add_to_list = item_list }
+        every_hegemony = { limit = { td_discovery_title_available_trigger = yes } add_to_list = item_list }
+    }
+}
+
+# Florin queries the native scope picker for a default even outside its window.
+# Reuse an open picker's list, or build the same filtered entries for the caller.
+td_discovery_select_title_effect = {
+    if = {
+        limit = { NOT = { any_in_list = { list = item_list always = yes } } }
+        td_discovery_collect_titles_effect = yes
+    }
+    ordered_in_list = {
+        list = item_list
+        order_by = 0
+        max = 1
+        check_range_bounds = no
+        save_scope_as = selected_item
+    }
+}

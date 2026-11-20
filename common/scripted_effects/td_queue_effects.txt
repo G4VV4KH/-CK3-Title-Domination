@@ -6,6 +6,31 @@ td_capture_response_turn_effect = {
     save_scope_value_as = { name = td_event_response_turn value = scope:td_target.var:td_response_turn }
 }
 
+# Phase two has no neutral answer. Native military restrictions can make every
+# lawful answer unavailable; close that campaign instead of opening a dead end.
+# Reuse this boundary after a refused protection request or rejected fealty too.
+td_dispatch_response_effect = {
+    if = {
+        limit = {
+            td_subjugation_response_blocked_trigger = yes
+        }
+        td_abort_subjugation_effect = yes
+    }
+    else = { trigger_event = title_domination.0002 }
+}
+
+# Also protects a human response window if its military situation changes while
+# open. This does not turn a stale phase-one dialog into a second-phase cancel.
+td_event_abort_subjugation_response_effect = {
+    if = {
+        limit = {
+            td_event_response_current_trigger = yes
+            td_subjugation_response_blocked_trigger = yes
+        }
+        td_abort_subjugation_effect = yes
+    }
+}
+
 # Skip only rulers who are no longer eligible respondents. Keep committed roles
 # untouched; the final formation guard remains responsible for changed sides.
 td_prune_response_queue_effect = {
@@ -74,7 +99,7 @@ td_pump_response_queue_effect = {
             }
             td_capture_response_turn_effect = yes
             # All authoritative state is committed before calling the child.
-            scope:td_target.var:td_current_respondent = { trigger_event = title_domination.0002 }
+            scope:td_target.var:td_current_respondent = { td_dispatch_response_effect = yes }
             }
         }
         scope:td_target = { remove_variable = td_dispatch_in_progress }
@@ -181,7 +206,7 @@ td_redispatch_current_response_effect = {
                 scope:td_target.var:td_current_respondent = { save_scope_as = td_requester }
                 scope:td_dominant = { trigger_event = title_domination.0003 }
             }
-            else = { scope:td_target.var:td_current_respondent = { trigger_event = title_domination.0002 } }
+            else = { scope:td_target.var:td_current_respondent = { td_dispatch_response_effect = yes } }
         }
         else = { td_pump_response_queue_effect = yes }
     }

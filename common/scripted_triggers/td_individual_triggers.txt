@@ -1,0 +1,28 @@
+﻿# Native war object identity is the campaign association. A later generation
+# cannot contain an old, completed war, even if its characters/title are reused.
+# Input: td_target title and td_individual_war actual war.
+td_individual_war_registered_trigger = {
+    exists = scope:td_target
+    exists = scope:td_individual_war
+    trigger_if = {
+        limit = { exists = scope:td_target exists = scope:td_individual_war }
+        scope:td_target = {
+            has_variable = td_active
+            has_variable = td_subjugation_phase
+            has_variable = td_individual_phase
+            any_in_list = { variable = td_individual_wars this = scope:td_individual_war }
+        }
+        scope:td_individual_war = { using_cb = td_individual_subjugation_cb }
+    }
+    trigger_else = { always = no }
+}
+
+td_individual_war_current_trigger = {
+    td_campaign_active_trigger = yes
+    td_individual_war_registered_trigger = yes
+    trigger_if = {
+        limit = { exists = scope:td_individual_war exists = scope:td_target.var:td_dominant }
+        scope:td_individual_war = { primary_attacker = scope:td_target.var:td_dominant }
+    }
+    trigger_else = { always = no }
+}

@@ -1,0 +1,66 @@
+﻿namespace = title_domination
+
+title_domination.0100 = {
+    type = character_event
+    title = title_domination.0100.t
+    desc = {
+        desc = title_domination.0100.desc
+        first_valid = {
+            triggered_desc = {
+                trigger = { has_game_rule = td_subjugation_individual }
+                desc = td_subjugation_mode_individual_tt
+            }
+            desc = td_subjugation_mode_coalition_tt
+        }
+        triggered_desc = {
+            trigger = { exists = scope:td_dp_count scope:td_dp_count > 0 }
+            desc = td_dp_start_desc
+        }
+    }
+    theme = war
+    left_portrait = root
+    trigger = { td_event_subjugation_offer_current_trigger = yes }
+    on_trigger_fail = { td_reconcile_subjugation_offer_effect = yes }
+    option = {
+        name = title_domination.0100.start
+        show_as_unavailable = { td_event_subjugation_offer_current_trigger = yes }
+        trigger = {
+            custom_tooltip = {
+                text = td_subjugation_compatible_tt
+                td_event_subjugation_offer_current_trigger = yes
+                td_subjugation_initiator_eligible_trigger = yes
+            }
+        }
+        td_show_diplomacy_preview_effect = yes
+        custom_tooltip = td_subjugation_start_tt
+        ordered_in_list = {
+            list = td_ready_fighters
+            order_by = current_military_strength
+            max = 99999
+            check_range_bounds = no
+            custom_tooltip = td_subjugation_target_tt
+        }
+        custom_tooltip = td_diplomacy_begin_tt
+        hidden_effect_new_object = { td_event_start_subjugation_effect = yes }
+        ai_chance = {
+            base = 75
+            modifier = { factor = 0 scope:td_subjugation_own_strength < scope:td_subjugation_enemy_strength }
+            modifier = { factor = 2 scope:td_subjugation_own_strength >= scope:td_subjugation_safe_strength }
+        }
+    }
+    option = {
+        name = title_domination.0100.finish
+        custom_tooltip = td_subjugation_finish_tt
+        hidden_effect_new_object = { td_event_finish_subjugation_effect = yes }
+        ai_chance = { base = 25 }
+    }
+}
+
+title_domination.0101 = {
+    type = character_event
+    title = title_domination.0101.t
+    desc = title_domination.0101.desc
+    theme = war
+    left_portrait = root
+    option = { name = title_domination.0101.ok }
+}
