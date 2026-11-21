@@ -69,6 +69,7 @@ Include the game/mod version, target title, involved rulers, active mods and ste
 - [Council Assignment Automation](https://steamcommunity.com/sharedfiles/filedetails/?id=3815689627) — automate council appointments and optimize councillor assignments.
 - [Strategist Assistant](https://steamcommunity.com/sharedfiles/filedetails/?id=3827659479) — plan armies, recruitment and wars.
 - [Accolade Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3836819350) — choose accolade attributes or knights first and set rank limits.
+- [Traitor Trials](https://steamcommunity.com/sharedfiles/filedetails/?id=3843236809) — judge defeated rebels after a war.
 
 ### Compatibility patches
 
